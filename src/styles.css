@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cinzel", "Times New Roman", serif;
+  --font-sans: "Figtree", "Segoe UI", system-ui, sans-serif;
+
+  --color-felt: #0b2e24;
+  --color-felt-deep: #071c16;
+  --color-felt-raise: #12382c;
+  --color-gold: #c9a227;
+  --color-gold-bright: #e3c56a;
+  --color-cream: #f3ead3;
+  --color-ink: #071612;
+  --color-muted: #b7c4bc;
+  --color-chip-red: #8b2a2a;
+  --color-chip-black: #14110e;
+  --color-win: #7dcea0;
+  --color-loss: #e07a7a;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-quick: 150ms;
+  --motion-fast: 250ms;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-felt);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+.felt-bg {
+  background-color: var(--color-felt);
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(201, 162, 39, 0.07), transparent 42%),
+    radial-gradient(circle at 88% 100%, rgba(7, 28, 22, 0.85), transparent 46%),
+    repeating-radial-gradient(
+      circle at 0 0,
+      rgba(0, 0, 0, 0.08) 0,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.333%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none !important;
+  }
+}

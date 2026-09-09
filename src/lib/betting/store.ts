@@ -1,0 +1,158 @@
+/**
+ * Simulated sportsbook state — bankroll, slip, tickets.
+ * Client-only localStorage. No real money.
+ *
+ * PROTOTYPE. Production: persist tickets and bankroll in Supabase; odds and
+ * scores stay on their swappable provider modules.
+ */
+
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { combineAmerican, toWin } from "./american";
+import { round2, uid } from "@/lib/utils";
+
+export type MarketKind = "spread" | "moneyline" | "total";
+export type SelectionSide = "home" | "away" | "over" | "under";
+export type TicketStatus = "open" | "won" | "lost" | "push" | "void";
+export type BookTab = "board" | "tickets" | "fantasy" | "house";
+
+export interface BetLeg {
+  id: string;
+  gameId: string;
+  label: string;
+  market: MarketKind;
+  side: SelectionSide;
+  line: number | null;
+  odds: number | null;
+  book: string | null;
+}
+
+export interface Ticket {
+  id: string;
+  placedAt: string;
+  legs: BetLeg[];
+  stake: number;
+  americanOdds: number | null;
+  toWin: number | null;
+  priced: boolean;
+  status: TicketStatus;
+}
+
+export const STARTING_BANKROLL = 10_000;
+export const STAKE_PRESETS = [25, 50, 100, 250, 500, 1000] as const;
+
+function isPricedOdds(odds: number | null | undefined): odds is number {
+  return odds !== null && odds !== undefined && Number.isFinite(odds) && odds !== 0;
+}
+
+interface BookState {
+  bankroll: number;
+  slip: BetLeg[];
+  stake: number;
+  tickets: Ticket[];
+  tab: BookTab;
+  slipOpen: boolean;
+  notice: string | null;
+  addLeg: (leg: Omit<BetLeg, "id">) => void;
+  removeLeg: (id: string) => void;
+  clearSlip: () => void;
+  setStake: (n: number) => void;
+  placeBet: () => void;
+  setTab: (tab: BookTab) => void;
+  setSlipOpen: (open: boolean) => void;
+  clearNotice: () => void;
+  resetBook: () => void;
+}
+
+export const useBook = create<BookState>()(
+  persist(
+    (set, get) => ({
+      bankroll: STARTING_BANKROLL,
+      slip: [],
+      stake: 100,
+      tickets: [],
+      tab: "board",
+      slipOpen: false,
+      notice: null,
+      addLeg: (leg) => {
+        const spreadPosted = leg.market === "spread" && leg.line !== null;
+        if (!isPricedOdds(leg.odds) && !spreadPosted) {
+          set({ notice: "That market is unavailable — no line posted." });
+          return;
+        }
+        const existing = get().slip.find(
+          (item) => item.gameId === leg.gameId && item.market === leg.market,
+        );
+        const next: BetLeg = { ...leg, id: uid("leg") };
+        const slip = existing
+          ? get().slip.map((item) => (item.id === existing.id ? { ...next, id: existing.id } : item))
+          : [...get().slip, next];
+        set({ slip, notice: null, slipOpen: true });
+      },
+      removeLeg: (id) => set({ slip: get().slip.filter((leg) => leg.id !== id) }),
+      clearSlip: () => set({ slip: [] }),
+      setStake: (n) => {
+        const stake = Math.max(0, round2(n));
+        set({ stake });
+      },
+      placeBet: () => {
+        const { slip, stake, bankroll } = get();
+        if (slip.length === 0) {
+          set({ notice: "Add a posted line to the slip first." });
+          return;
+        }
+        if (stake <= 0) {
+          set({ notice: "Enter a stake greater than zero." });
+          return;
+        }
+        if (stake > bankroll) {
+          set({ notice: "Stake is larger than the simulated bankroll." });
+          return;
+        }
+        const priced = slip.every((leg) => isPricedOdds(leg.odds));
+        const americanOdds = priced ? combineAmerican(slip.map((leg) => leg.odds as number)) : null;
+        const win = priced && americanOdds !== null ? toWin(stake, americanOdds) : null;
+        const ticket: Ticket = {
+          id: uid("tkt"),
+          placedAt: new Date().toISOString(),
+          legs: slip,
+          stake,
+          americanOdds,
+          toWin: win,
+          priced,
+          status: "open",
+        };
+        set({
+          bankroll: round2(bankroll - stake),
+          tickets: [ticket, ...get().tickets],
+          slip: [],
+          notice: priced
+            ? null
+            : "Ticket booked unpriced — juice was not on this BetMGM snapshot. Simulation only.",
+          tab: "tickets",
+          slipOpen: false,
+        });
+      },
+      setTab: (tab) => set({ tab, slipOpen: false }),
+      setSlipOpen: (slipOpen) => set({ slipOpen }),
+      clearNotice: () => set({ notice: null }),
+      resetBook: () =>
+        set({
+          bankroll: STARTING_BANKROLL,
+          slip: [],
+          stake: 100,
+          tickets: [],
+          notice: null,
+        }),
+    }),
+    {
+      name: "eastside-legends-sim",
+      partialize: (state) => ({
+        bankroll: state.bankroll,
+        slip: state.slip,
+        stake: state.stake,
+        tickets: state.tickets,
+      }),
+    },
+  ),
+);

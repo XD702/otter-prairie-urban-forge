@@ -1,0 +1,2591 @@
+
+
+===== src/routes/index.tsx =====
+
+import { createFileRoute } from "@tanstack/react-router";
+import { SportsbookApp } from "@/components/sportsbook/app-shell";
+import { loadScoreBoard, unavailableScoreBoard, type ScoreBoard } from "@/lib/scores";
+
+export const Route = createFileRoute("/")({
+  loader: async (): Promise<{ scores: ScoreBoard }> => {
+    try {
+      const scores = await loadScoreBoard();
+      if (scores.status === "ready" && scores.games.length > 0) return { scores };
+      return { scores: unavailableScoreBoard() };
+    } catch {
+      return { scores: unavailableScoreBoard() };
+    }
+  },
+  component: Home,
+});
+
+function Home() {
+  const { scores } = Route.useLoaderData();
+  return <SportsbookApp initialScores={scores} />;
+}
+
+
+===== src/components/sportsbook/app-shell.tsx =====
+
+import { useEffect, useState } from "react";
+import { Board } from "@/components/sportsbook/board";
+import { BetSlip } from "@/components/sportsbook/bet-slip";
+import { ChipCounter } from "@/components/sportsbook/chip-counter";
+import { FantasyBoard } from "@/components/sportsbook/fantasy-board";
+import { HouseRules } from "@/components/sportsbook/house-rules";
+import { MyBets } from "@/components/sportsbook/my-bets";
+import { Ticker } from "@/components/sportsbook/ticker";
+import { Button } from "@/components/ui/button";
+import { STARTING_BANKROLL, useBook, type BookTab } from "@/lib/betting/store";
+import { useBookFeeds } from "@/lib/feeds/use-feeds";
+import type { ScoreBoard } from "@/lib/scores";
+import { ClipboardList, LayoutGrid, ScrollText, Users, X } from "lucide-react";
+
+const TABS: { id: BookTab; label: string; icon: typeof LayoutGrid }[] = [
+  { id: "board", label: "Board", icon: LayoutGrid },
+  { id: "tickets", label: "Tickets", icon: ClipboardList },
+  { id: "fantasy", label: "Roster", icon: Users },
+  { id: "house", label: "House", icon: ScrollText },
+];
+
+export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard }) {
+  const feeds = useBookFeeds(initialScores);
+  const tab = useBook((s) => s.tab);
+  const setTab = useBook((s) => s.setTab);
+  const slip = useBook((s) => s.slip);
+  const slipOpen = useBook((s) => s.slipOpen);
+  const setSlipOpen = useBook((s) => s.setSlipOpen);
+  const storedBankroll = useBook((s) => s.bankroll);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const bankroll = hydrated ? storedBankroll : STARTING_BANKROLL;
+
+  return (
+    <div className="felt-bg min-h-dvh text-cream">
+      <header className="border-b border-gold/20 bg-felt-deep/90">
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="font-display text-[11px] uppercase tracking-[0.32em] text-gold">
+              Las Vegas · Sim book
+            </p>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
+              Eastside Legends Sim
+            </h1>
+            <p className="mt-1 text-sm text-muted">
+              Prototype NFL betting and fantasy tracker. Simulation only. No real money.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <ChipCounter bankroll={bankroll} />
+            <Button
+              variant="felt"
+              className="lg:hidden"
+              onClick={() => setSlipOpen(true)}
+            >
+              Slip{slip.length ? ` (${slip.length})` : ""}
+            </Button>
+          </div>
+        </div>
+        <nav className="mx-auto flex max-w-[1400px] gap-1 overflow-x-auto px-4 pb-3 sm:px-6">
+          {TABS.map((item) => {
+            const Icon = item.icon;
+            const active = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTab(item.id)}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm ${
+                  active
+                    ? "border-gold bg-gold text-ink"
+                    : "border-gold/20 text-cream hover:border-gold/50"
+                }`}
+              >
+                <Icon className="size-4" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+      </header>
+
+      <Ticker scores={feeds.scores} />
+
+      <div className="mx-auto grid max-w-[1400px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_320px]">
+        <div className="hidden lg:block">
+          <div className="sticky top-4 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-1">
+            <FantasyBoard roster={feeds.roster} compact />
+          </div>
+        </div>
+
+        <main className="min-w-0 pb-24 lg:pb-8">
+          {tab === "board" ? <Board odds={feeds.odds} scores={feeds.scores} /> : null}
+          {tab === "tickets" ? <MyBets scores={feeds.scores} /> : null}
+          {tab === "fantasy" ? <FantasyBoard roster={feeds.roster} /> : null}
+          {tab === "house" ? <HouseRules /> : null}
+        </main>
+
+        <div className="hidden xl:block">
+          <div className="sticky top-4">
+            <BetSlip scores={feeds.scores} />
+          </div>
+        </div>
+      </div>
+
+      {slipOpen ? (
+        <div className="fixed inset-0 z-40 xl:hidden">
+          <button
+            type="button"
+            aria-label="Close slip"
+            className="absolute inset-0 bg-ink/70"
+            onClick={() => setSlipOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[var(--radius-xl)] p-3">
+            <div className="mb-2 flex justify-end">
+              <Button variant="felt" size="icon" onClick={() => setSlipOpen(false)} aria-label="Close">
+                <X className="size-4" />
+              </Button>
+            </div>
+            <BetSlip scores={feeds.scores} />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+
+===== src/components/sportsbook/board.tsx =====
+
+import { GameCard } from "@/components/sportsbook/game-card";
+import { UnavailablePlaque } from "@/components/sportsbook/unavailable-plaque";
+import { Badge } from "@/components/ui/badge";
+import type { OddsBoard } from "@/lib/odds";
+import type { ScoreBoard } from "@/lib/scores";
+
+export function Board({ odds, scores }: { odds: OddsBoard; scores: ScoreBoard }) {
+  const weekLabel = odds.week ? `Week ${odds.week}` : "Week unavailable";
+  const byId = new Map(scores.games.map((game) => [game.gameId, game]));
+
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">The card</p>
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-cream">NFL board</h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={odds.week ? "gold" : "unavailable"}>{weekLabel}</Badge>
+          <Badge tone="gold">Spreads only</Badge>
+          <Badge tone="snapshot">Simulation</Badge>
+        </div>
+      </div>
+      <p className="mb-2 text-sm leading-relaxed text-cream text-pretty">
+        {odds.sourceLabel ?? "Source unavailable"}
+      </p>
+      <p className="mb-5 text-sm text-muted">
+        Dated snapshot, not a live scrape. One book: BetMGM. Moneyline, total, and juice are
+        unavailable — not invented. No real money.
+      </p>
+
+      {odds.status !== "ready" || odds.games.length === 0 ? (
+        <UnavailablePlaque
+          kicker="BetMGM snapshot"
+          title="Lines unavailable"
+          detail={
+            odds.reason ??
+            "The slate has not been inserted for this build. Markets stay empty until a real snapshot is baked in. No numbers are invented."
+          }
+        />
+      ) : (
+        <div className="grid gap-3 xl:grid-cols-2">
+          {odds.games.map((game) => (
+            <GameCard key={game.id} game={game} score={byId.get(game.id)} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+
+===== src/components/sportsbook/game-card.tsx =====
+
+import { Badge } from "@/components/ui/badge";
+import type { GameLine } from "@/lib/odds";
+import { liveLine, type GameScore } from "@/lib/scores";
+import { NFL_TEAMS } from "@/lib/nfl/teams";
+import { formatSpreadLine } from "@/lib/betting/american";
+import { useBook, type MarketKind, type SelectionSide } from "@/lib/betting/store";
+import { cn } from "@/lib/utils";
+
+interface CellProps {
+  label: string;
+  value: string;
+  posted: boolean;
+  onPick: () => void;
+  active: boolean;
+}
+
+function OddsCell({ label, value, posted, onPick, active }: CellProps) {
+  return (
+    <button
+      type="button"
+      disabled={!posted}
+      onClick={onPick}
+      className={cn(
+        "flex min-h-11 flex-col items-center justify-center rounded-[var(--radius-sm)] border px-2 py-1.5 text-center transition-colors duration-[var(--motion-quick)]",
+        posted
+          ? active
+            ? "border-gold bg-gold/15 text-gold"
+            : "border-gold/25 bg-ink/40 text-cream hover:border-gold/55 hover:bg-gold/10"
+          : "cursor-not-allowed border-cream/10 bg-ink/30 text-muted",
+      )}
+    >
+      <span className="text-[10px] uppercase tracking-[0.16em] text-muted">{label}</span>
+      <span className="text-sm font-semibold tabular-nums">{value}</span>
+    </button>
+  );
+}
+
+export function GameCard({ game, score }: { game: GameLine; score?: GameScore }) {
+  const addLeg = useBook((s) => s.addLeg);
+  const slip = useBook((s) => s.slip);
+  const away = NFL_TEAMS[game.away];
+  const home = NFL_TEAMS[game.home];
+
+  const isActive = (market: MarketKind, side: SelectionSide) =>
+    slip.some((leg) => leg.gameId === game.id && leg.market === market && leg.side === side);
+
+  const pickSpread = (side: SelectionSide, line: number | null, label: string) => {
+    if (line === null) return;
+    addLeg({
+      gameId: game.id,
+      label,
+      market: "spread",
+      side,
+      line,
+      odds: null,
+      book: game.book,
+    });
+  };
+
+  const kickoff = game.kickoffLabel ?? "Kickoff unavailable";
+  const matchupMark = game.neutralSite ? "vs" : "@";
+  const live = score?.inProgress;
+
+  return (
+    <article className="rounded-[var(--radius-lg)] border border-gold/25 bg-felt-raise p-3 shadow-[inset_0_1px_0_rgba(227,197,106,0.12)] sm:p-4">
+      <header className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p className="font-display text-lg leading-tight text-cream">
+            {away.abbr} <span className="text-muted">{matchupMark}</span> {home.abbr}
+          </p>
+          <p className="mt-0.5 text-xs text-muted">
+            {away.city} {away.name} {game.neutralSite ? "vs" : "at"} {home.city} {home.name}
+          </p>
+          {score ? (
+            <p className="mt-1 text-sm font-semibold tabular-nums text-gold-bright">{liveLine(score)}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          {game.opener ? <Badge tone="gold">Opener</Badge> : null}
+          {game.book ? <Badge tone="gold">{game.book}</Badge> : <Badge tone="unavailable">Book unavailable</Badge>}
+          {game.venue ? <Badge tone="snapshot">{game.venue}</Badge> : null}
+          {live ? <Badge tone="pending">Live</Badge> : null}
+          {score?.phase === "final" ? <Badge tone="final">Final</Badge> : null}
+          <span className="text-[11px] text-muted tabular-nums">{kickoff}</span>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-3 gap-2 text-[11px] uppercase tracking-[0.14em] text-gold/80">
+        <span className="px-1">Spread</span>
+        <span className="px-1">Moneyline</span>
+        <span className="px-1">Total</span>
+      </div>
+      <div className="mt-1.5 grid grid-cols-3 gap-2">
+        <div className="grid gap-1.5">
+          <OddsCell
+            label={away.abbr}
+            value={formatSpreadLine(game.spread.awayLine)}
+            posted={game.spread.awayLine !== null}
+            active={isActive("spread", "away")}
+            onPick={() =>
+              pickSpread("away", game.spread.awayLine, `${away.abbr} ${formatSpreadLine(game.spread.awayLine)}`)
+            }
+          />
+          <OddsCell
+            label={home.abbr}
+            value={formatSpreadLine(game.spread.homeLine)}
+            posted={game.spread.homeLine !== null}
+            active={isActive("spread", "home")}
+            onPick={() =>
+              pickSpread("home", game.spread.homeLine, `${home.abbr} ${formatSpreadLine(game.spread.homeLine)}`)
+            }
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <OddsCell label={away.abbr} value="Unavailable" posted={false} active={false} onPick={() => undefined} />
+          <OddsCell label={home.abbr} value="Unavailable" posted={false} active={false} onPick={() => undefined} />
+        </div>
+        <div className="grid gap-1.5">
+          <OddsCell label="Over" value="Unavailable" posted={false} active={false} onPick={() => undefined} />
+          <OddsCell label="Under" value="Unavailable" posted={false} active={false} onPick={() => undefined} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+
+===== src/components/sportsbook/ticker.tsx =====
+
+import { liveLine, SCORES_UNAVAILABLE, type GameScore, type ScoreBoard } from "@/lib/scores";
+import { NFL_TEAMS } from "@/lib/nfl/teams";
+import { Badge } from "@/components/ui/badge";
+
+function phaseTone(game: Pick<GameScore, "phase" | "inProgress">) {
+  if (game.inProgress) return "pending" as const;
+  if (game.phase === "final") return "final" as const;
+  if (game.phase === "pending") return "pending" as const;
+  return "snapshot" as const;
+}
+
+function phaseLabel(game: Pick<GameScore, "phase" | "inProgress">) {
+  if (game.inProgress) return "Live";
+  if (game.phase === "final") return "Final";
+  if (game.phase === "pending") return "Pending";
+  return "Snapshot";
+}
+
+function lineText(game: GameScore) {
+  const away = NFL_TEAMS[game.away];
+  const home = NFL_TEAMS[game.home];
+  return `${away.abbr} @ ${home.abbr}  ${liveLine(game)}`;
+}
+
+export function Ticker({ scores }: { scores: ScoreBoard }) {
+  const live = scores.status === "ready" && scores.games.length > 0;
+  const items = live
+    ? scores.games.map((game) => ({
+        id: game.gameId,
+        text: lineText(game),
+        phase: game.phase,
+        inProgress: game.inProgress,
+      }))
+    : [
+        {
+          id: "unavailable",
+          text: SCORES_UNAVAILABLE,
+          phase: "snapshot" as const,
+          inProgress: false,
+        },
+      ];
+
+  const loop = [...items, ...items, ...items];
+
+  return (
+    <div className="relative overflow-hidden border-y border-gold/20 bg-ink">
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-linear-to-r from-ink to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-linear-to-l from-ink to-transparent" />
+      <div className="flex items-center gap-3 px-3 py-2">
+        <Badge tone="gold" className="shrink-0">
+          Ticker
+        </Badge>
+        <div className="relative min-w-0 flex-1 overflow-hidden">
+          <ul className="ticker-track flex w-max items-center gap-10 motion-safe:animate-[ticker_36s_linear_infinite]">
+            {loop.map((item, i) => (
+              <li key={`${item.id}-${i}`} className="flex items-center gap-3 text-sm text-cream">
+                <Badge tone={phaseTone(item)}>{live ? phaseLabel(item) : "Unavailable"}</Badge>
+                <span className="whitespace-nowrap font-medium tracking-wide tabular-nums">
+                  {item.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+===== src/components/sportsbook/bet-slip.tsx =====
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { combineAmerican, formatAmerican, toWin } from "@/lib/betting/american";
+import { STAKE_PRESETS, useBook } from "@/lib/betting/store";
+import { liveLine, type ScoreBoard } from "@/lib/scores";
+import { formatMoney } from "@/lib/utils";
+import { X } from "lucide-react";
+
+export function BetSlip({ scores }: { scores: ScoreBoard }) {
+  const slip = useBook((s) => s.slip);
+  const stake = useBook((s) => s.stake);
+  const bankroll = useBook((s) => s.bankroll);
+  const notice = useBook((s) => s.notice);
+  const removeLeg = useBook((s) => s.removeLeg);
+  const clearSlip = useBook((s) => s.clearSlip);
+  const setStake = useBook((s) => s.setStake);
+  const placeBet = useBook((s) => s.placeBet);
+  const clearNotice = useBook((s) => s.clearNotice);
+  const byId = new Map(scores.games.map((game) => [game.gameId, game]));
+
+  const priced = slip.length > 0 && slip.every((leg) => leg.odds !== null);
+  const american = priced ? combineAmerican(slip.map((leg) => leg.odds as number)) : null;
+  const win = priced && american !== null ? toWin(stake, american) : null;
+  const payout = win !== null ? win + stake : null;
+
+  return (
+    <aside className="rounded-[var(--radius-xl)] border border-gold/30 bg-felt-deep p-4 shadow-[inset_0_1px_0_rgba(227,197,106,0.12)]">
+      <div className="flex items-baseline justify-between gap-3">
+        <div>
+          <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Window</p>
+          <h2 className="font-display text-2xl font-semibold text-cream">Bet slip</h2>
+        </div>
+        {slip.length > 0 ? (
+          <button
+            type="button"
+            onClick={clearSlip}
+            className="text-xs uppercase tracking-[0.16em] text-muted hover:text-cream"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+
+      {slip.length === 0 ? (
+        <p className="mt-5 text-sm leading-relaxed text-muted text-pretty">
+          Tap a posted spread to add a sim lean. This snapshot has no juice, so tickets are
+          unpriced. Simulation only.
+        </p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {slip.map((leg) => {
+            const live = byId.get(leg.gameId);
+            return (
+              <li
+                key={leg.id}
+                className="flex items-start justify-between gap-2 rounded-[var(--radius-md)] border border-gold/20 bg-ink/40 p-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-cream">{leg.label}</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-muted">
+                    {leg.market} {leg.book ? `· ${leg.book}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs tabular-nums text-gold-bright">
+                    {live ? liveLine(live) : "Score unavailable"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gold tabular-nums">
+                    {leg.odds === null ? "Unpriced" : formatAmerican(leg.odds)}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${leg.label}`}
+                    onClick={() => removeLeg(leg.id)}
+                    className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] text-muted hover:text-cream"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <div className="mt-5 space-y-3">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-gold">Stake</p>
+        <div className="flex flex-wrap gap-1.5">
+          {STAKE_PRESETS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => setStake(preset)}
+              className={`h-9 min-w-11 rounded-full border px-3 text-xs tabular-nums ${
+                stake === preset
+                  ? "border-gold bg-gold text-ink"
+                  : "border-gold/25 text-cream hover:border-gold/60"
+              }`}
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+        <Input
+          type="number"
+          min={0}
+          step={1}
+          value={Number.isFinite(stake) ? stake : 0}
+          onChange={(e) => setStake(Number(e.target.value))}
+          aria-label="Custom stake"
+        />
+      </div>
+
+      <dl className="mt-5 space-y-2 text-sm">
+        <div className="flex justify-between text-muted">
+          <dt>Odds</dt>
+          <dd className="text-cream tabular-nums">{american !== null ? formatAmerican(american) : "Unavailable"}</dd>
+        </div>
+        <div className="flex justify-between text-muted">
+          <dt>To win</dt>
+          <dd className="text-gold tabular-nums">{win !== null ? formatMoney(win) : "Unavailable"}</dd>
+        </div>
+        <div className="flex justify-between text-muted">
+          <dt>Payout</dt>
+          <dd className="text-cream tabular-nums">{payout !== null ? formatMoney(payout) : "Unavailable"}</dd>
+        </div>
+        <div className="flex justify-between text-muted">
+          <dt>On the rail</dt>
+          <dd className="text-cream tabular-nums">{formatMoney(bankroll)}</dd>
+        </div>
+      </dl>
+
+      {notice ? (
+        <p className="mt-3 text-sm text-loss" role="status">
+          {notice}{" "}
+          <button type="button" className="underline" onClick={clearNotice}>
+            Dismiss
+          </button>
+        </p>
+      ) : null}
+
+      <Button className="mt-5 w-full" size="lg" onClick={placeBet} disabled={slip.length === 0}>
+        Place sim bet
+      </Button>
+      <p className="mt-3 text-[11px] leading-relaxed text-muted">
+        Simulated chips only. No real money. Juice is not on this snapshot, so tickets stay
+        unpriced.
+      </p>
+    </aside>
+  );
+}
+
+
+===== src/components/sportsbook/my-bets.tsx =====
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { UnavailablePlaque } from "@/components/sportsbook/unavailable-plaque";
+import { formatAmerican } from "@/lib/betting/american";
+import { useBook, type TicketStatus } from "@/lib/betting/store";
+import { liveLine, type ScoreBoard } from "@/lib/scores";
+import { formatMoney } from "@/lib/utils";
+
+const STATUS_TONE: Record<TicketStatus, "pending" | "final" | "unavailable" | "gold" | "snapshot"> =
+  {
+    open: "pending",
+    won: "final",
+    lost: "unavailable",
+    push: "snapshot",
+    void: "unavailable",
+  };
+
+export function MyBets({ scores }: { scores: ScoreBoard }) {
+  const tickets = useBook((s) => s.tickets);
+  const resetBook = useBook((s) => s.resetBook);
+  const byId = new Map(scores.games.map((game) => [game.gameId, game]));
+
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Tickets</p>
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-cream">My bets</h2>
+        </div>
+        <Button variant="ghost" size="sm" onClick={resetBook}>
+          Reset sim bankroll
+        </Button>
+      </div>
+      <p className="mb-5 text-sm text-muted">
+        Settlement waits on a final score. Live layer: ESPN public scoreboard, 30s while games
+        are in progress. Current feed: {scores.status === "ready" ? "posted" : "unavailable"}.
+        Simulation only. No real money.
+      </p>
+
+      {tickets.length === 0 ? (
+        <UnavailablePlaque
+          kicker="Window"
+          title="No tickets yet"
+          detail="Tap a posted spread on the board, then book a sim ticket. Juice is unavailable on this snapshot, so tickets are unpriced until a priced feed is swapped in."
+        />
+      ) : (
+        <ul className="space-y-3">
+          {tickets.map((ticket) => (
+            <li
+              key={ticket.id}
+              className="rounded-[var(--radius-lg)] border border-gold/25 bg-felt-raise p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-display text-lg text-cream">
+                    {ticket.legs.length > 1 ? `${ticket.legs.length}-leg parlay` : "Straight"}
+                  </p>
+                  <p className="text-xs text-muted tabular-nums">
+                    {new Date(ticket.placedAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge tone={STATUS_TONE[ticket.status]}>{ticket.status}</Badge>
+                  {ticket.priced ? null : <Badge tone="unavailable">Unpriced</Badge>}
+                </div>
+              </div>
+              <ul className="mt-3 space-y-1 text-sm text-cream">
+                {ticket.legs.map((leg) => {
+                  const live = byId.get(leg.gameId);
+                  return (
+                    <li key={leg.id} className="flex justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="block">{leg.label}</span>
+                        <span className="block text-xs tabular-nums text-gold-bright">
+                          {live ? liveLine(live) : "Score unavailable"}
+                        </span>
+                      </span>
+                      <span className="text-gold tabular-nums">
+                        {leg.odds === null ? "Unavailable" : formatAmerican(leg.odds)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <dl className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted">
+                <div>
+                  <dt>Stake</dt>
+                  <dd className="text-cream tabular-nums">{formatMoney(ticket.stake)}</dd>
+                </div>
+                <div>
+                  <dt>To win</dt>
+                  <dd className="text-gold tabular-nums">
+                    {ticket.toWin === null ? "Unavailable" : formatMoney(ticket.toWin)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Price</dt>
+                  <dd className="text-cream tabular-nums">
+                    {ticket.americanOdds === null ? "Unavailable" : formatAmerican(ticket.americanOdds)}
+                  </dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+
+===== src/components/sportsbook/fantasy-board.tsx =====
+
+import { Badge } from "@/components/ui/badge";
+import { UnavailablePlaque } from "@/components/sportsbook/unavailable-plaque";
+import type { FantasyRoster, LineupSlot } from "@/lib/fantasy";
+import { cn } from "@/lib/utils";
+
+function SlotRow({ slot, compact }: { slot: LineupSlot; compact: boolean }) {
+  const player = slot.player;
+  return (
+    <li
+      className={cn(
+        "flex items-center gap-2 rounded-[var(--radius-sm)] border border-gold/15 bg-ink/30 px-3",
+        compact ? "min-h-11 py-1.5" : "min-h-12 py-2",
+      )}
+    >
+      <span className="w-11 shrink-0 text-[11px] font-medium uppercase tracking-[0.16em] text-gold">
+        {slot.label}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={cn("text-cream", compact ? "truncate text-sm" : "text-base")}>
+          {player?.name ?? "Unavailable"}
+        </p>
+        {player ? (
+          <p className="text-[11px] text-muted">
+            {player.team ?? "—"}
+            {player.position !== slot.position && slot.position === "FLEX" ? ` · ${player.position}` : ""}
+            {slot.note ? ` · ${slot.note}` : ""}
+          </p>
+        ) : null}
+      </div>
+      {player?.status ? (
+        <span
+          className={cn(
+            "shrink-0 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]",
+            player.status.startsWith("Out")
+              ? "border-loss/40 text-loss"
+              : "border-gold/40 text-gold-bright",
+          )}
+        >
+          {player.status}
+        </span>
+      ) : null}
+    </li>
+  );
+}
+
+function SlotList({
+  title,
+  slots,
+  compact,
+}: {
+  title: string;
+  slots: LineupSlot[];
+  compact: boolean;
+}) {
+  if (slots.length === 0) return null;
+  return (
+    <div>
+      <p className="mb-1.5 text-[10px] uppercase tracking-[0.22em] text-gold/80">{title}</p>
+      <ul className="space-y-1.5">
+        {slots.map((item) => (
+          <SlotRow key={item.id} slot={item} compact={compact} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function FantasyBoard({ roster, compact = false }: { roster: FantasyRoster; compact?: boolean }) {
+  const ready = roster.status === "ready";
+
+  return (
+    <section>
+      {compact ? null : (
+        <div className="mb-4">
+          <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Lineup</p>
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-cream">Roster</h2>
+          {roster.ownerLabel ? <p className="mt-1 text-sm text-muted">{roster.ownerLabel}</p> : null}
+        </div>
+      )}
+      <div className="rounded-[var(--radius-xl)] border border-gold/25 bg-felt-deep p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-display text-sm uppercase tracking-[0.14em] text-gold">{roster.league}</p>
+            {roster.yahooId ? (
+              <p className="text-[11px] text-muted tabular-nums">Yahoo {roster.yahooId}</p>
+            ) : null}
+          </div>
+          <Badge tone={ready ? "final" : "unavailable"}>{ready ? "Posted" : "Unavailable"}</Badge>
+        </div>
+        <div className="space-y-4">
+          <SlotList title="Start" slots={roster.slots} compact={compact} />
+          <SlotList title="Bench" slots={roster.bench} compact={compact} />
+        </div>
+        {ready ? (
+          <p className="mt-3 text-xs leading-relaxed text-muted text-pretty">
+            Rob's board only. No opponent column. Simulation only.
+          </p>
+        ) : (
+          <p className="mt-3 text-xs leading-relaxed text-muted text-pretty">
+            {roster.reason ?? "Fantasy roster was not provided at build time."} No player names
+            invented. No opponent column.
+          </p>
+        )}
+      </div>
+      {compact || ready ? null : (
+        <div className="mt-4">
+          <UnavailablePlaque
+            kicker="Fantasy"
+            title="Roster unavailable"
+            detail="Slots are listed with positions only. Names stay empty until a real roster is inserted."
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+
+===== src/components/sportsbook/chip-counter.tsx =====
+
+import { ChipStack } from "@/components/sportsbook/chip-stack";
+import { formatMoney } from "@/lib/utils";
+
+export function ChipCounter({ bankroll }: { bankroll: number }) {
+  return (
+    <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-gold/25 bg-ink/40 px-3 py-2 sm:px-4">
+      <ChipStack amount={bankroll} />
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-[0.22em] text-gold">Sim bankroll</p>
+        <p className="font-display text-xl leading-none tracking-tight text-cream tabular-nums sm:text-2xl">
+          {formatMoney(bankroll)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
+===== src/components/sportsbook/chip-stack.tsx =====
+
+import { formatMoney } from "@/lib/utils";
+
+const CHIP_VALUES = [1000, 500, 100, 25, 5, 1] as const;
+
+const CHIP_FACE: Record<(typeof CHIP_VALUES)[number], string> = {
+  1000: "bg-gold text-ink",
+  500: "bg-[#5c2424] text-cream",
+  100: "bg-chip-black text-gold",
+  25: "bg-[#1f5a43] text-cream",
+  5: "bg-chip-red text-cream",
+  1: "bg-cream text-ink",
+};
+
+function breakdown(amount: number): { value: number; count: number }[] {
+  let remaining = Math.max(0, Math.floor(amount));
+  return CHIP_VALUES.map((value) => {
+    const count = Math.min(8, Math.floor(remaining / value));
+    remaining -= count * value;
+    return { value, count };
+  }).filter((row) => row.count > 0);
+}
+
+export function ChipStack({ amount }: { amount: number }) {
+  const stacks = breakdown(amount);
+  return (
+    <div className="flex items-end gap-2" aria-hidden="true">
+      {stacks.length === 0 ? (
+        <div className="size-9 rounded-full border border-dashed border-gold/25" />
+      ) : (
+        stacks.map((stack) => (
+          <div key={stack.value} className="relative h-12 w-9">
+            {Array.from({ length: stack.count }).map((_, i) => (
+              <span
+                key={i}
+                className={`absolute left-0 right-0 mx-auto size-8 rounded-full border border-black/30 shadow-[0_1px_0_rgba(255,255,255,0.2)_inset] ${CHIP_FACE[stack.value as (typeof CHIP_VALUES)[number]]}`}
+                style={{ bottom: i * 4 }}
+              />
+            ))}
+          </div>
+        ))
+      )}
+      <span className="sr-only">Simulated chips totaling {formatMoney(amount)}</span>
+    </div>
+  );
+}
+
+
+===== src/components/sportsbook/house-rules.tsx =====
+
+export function HouseRules() {
+  return (
+    <section>
+      <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">The house</p>
+      <h2 className="font-display text-3xl font-semibold tracking-tight text-cream">House rules</h2>
+      <div className="mt-5 space-y-4 text-sm leading-relaxed text-cream/90">
+        <p>
+          Eastside Legends Sim is a prototype. Simulated bankroll only. No real money. No live
+          paid data feeds.
+        </p>
+        <ul className="space-y-3 text-muted">
+          <li>
+            <span className="text-cream">Lines.</span> Week 1 spreads from a dated BetMGM snapshot.
+            Source: USA Today, odds courtesy of BetMGM as of Tuesday Sep 8, 2026, 10:45 a.m. ET.
+            Not a live scrape. One casino: BetMGM.
+          </li>
+          <li>
+            <span className="text-cream">Markets.</span> Spreads only. Moneyline, total, and juice
+            are unavailable on this board and are not invented. The opener is SEA −3 from this
+            USA Today card.
+          </li>
+          <li>
+            <span className="text-cream">Scores.</span> ESPN public scoreboard, swappable layer.
+            Snapshot / pending / final. Polls every 30 seconds while a game is in progress. Unofficial
+            feed — if it fails the ticker shows “Scores unavailable” and the rest of the book stays
+            up. Nothing is invented.
+          </li>
+          <li>
+            <span className="text-cream">Roster.</span> League of Eastside Legends (Yahoo 288732).
+            Starters and bench are the inserted lineup only. No opponent column. No extra
+            players invented.
+          </li>
+          <li>
+            <span className="text-cream">Tickets.</span> Spreads can be booked as unpriced sim
+            leans. Payout stays unavailable until juice exists. Open tickets wait on a final
+            score.
+          </li>
+          <li>
+            <span className="text-cream">Production.</span> Odds module swaps to The Odds API.
+            Scores module swaps the same way — ESPN unofficial now, paid feed later — without
+            touching ticker, cards, or tickets. Persistence moves to Supabase. UI stays on the
+            same board contract.
+          </li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+
+===== src/components/sportsbook/unavailable-plaque.tsx =====
+
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+interface UnavailablePlaqueProps {
+  kicker: string;
+  title: string;
+  detail: string;
+  className?: string;
+}
+
+export function UnavailablePlaque({
+  kicker,
+  title,
+  detail,
+  className,
+}: UnavailablePlaqueProps) {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-[var(--radius-xl)] border border-gold/30 bg-felt-deep/80 p-6 sm:p-8",
+        "shadow-[inset_0_1px_0_rgba(227,197,106,0.18),0_20px_50px_rgba(0,0,0,0.35)]",
+        className,
+      )}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-3 rounded-[calc(var(--radius-xl)-12px)] border border-gold/15"
+      />
+      <Badge tone="unavailable">Unavailable</Badge>
+      <p className="mt-4 font-display text-xs uppercase tracking-[0.28em] text-gold">{kicker}</p>
+      <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight text-cream text-balance">
+        {title}
+      </h3>
+      <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted text-pretty">{detail}</p>
+    </div>
+  );
+}
+
+
+===== src/lib/odds/index.ts =====
+
+/**
+ * Odds module — the only import path the UI should use.
+ *
+ * Swap ACTIVE_ODDS_PROVIDER to `theOddsApiProvider` when going live.
+ * Board / slip / tickets consume OddsBoard and never the snapshot file.
+ *
+ * PROTOTYPE. Production: The Odds API + Supabase.
+ */
+
+import { snapshotOddsProvider } from "./snapshot-provider";
+import type { OddsBoard, OddsProvider } from "./types";
+
+export type {
+  FeedStatus,
+  GameLine,
+  MoneylineMarket,
+  OddsBoard,
+  OddsProvider,
+  OddsSourceId,
+  SpreadMarket,
+  TotalMarket,
+} from "./types";
+
+export { EMPTY_ODDS_BOARD } from "./types";
+export { theOddsApiProvider } from "./live-provider";
+export { snapshotOddsProvider };
+
+/** Active feed. Change this one binding to replace snapshot with live odds. */
+export const ACTIVE_ODDS_PROVIDER: OddsProvider = snapshotOddsProvider;
+
+export function peekOddsBoard(): OddsBoard {
+  return ACTIVE_ODDS_PROVIDER.peekBoard();
+}
+
+export function loadOddsBoard(): Promise<OddsBoard> {
+  return ACTIVE_ODDS_PROVIDER.getBoard();
+}
+
+
+===== src/lib/odds/types.ts =====
+
+/**
+ * Canonical odds board contract.
+ *
+ * UI must depend on these types + OddsProvider only. Snapshot JSON and a
+ * future The Odds API client both map into GameLine so the board, bet slip,
+ * and tickets never change when the feed is swapped.
+ *
+ * PROTOTYPE: dated snapshot, no live paid data, no real money. Production
+ * will use The Odds API (live moneylines/spreads/totals) and persist tickets
+ * in Supabase.
+ */
+
+import type { TeamAbbr } from "@/lib/nfl/teams";
+
+export type OddsSourceId = "snapshot" | "the-odds-api";
+
+export type FeedStatus = "ready" | "unavailable" | "loading" | "error";
+
+export interface MoneylineMarket {
+  home: number | null;
+  away: number | null;
+  draw: number | null;
+}
+
+export interface SpreadMarket {
+  homeLine: number | null;
+  awayLine: number | null;
+  homeJuice: number | null;
+  awayJuice: number | null;
+}
+
+export interface TotalMarket {
+  line: number | null;
+  overJuice: number | null;
+  underJuice: number | null;
+}
+
+export interface GameLine {
+  id: string;
+  startTime: string | null;
+  kickoffLabel: string | null;
+  week: number | null;
+  home: TeamAbbr;
+  away: TeamAbbr;
+  book: string | null;
+  venue: string | null;
+  neutralSite: boolean;
+  opener: boolean;
+  moneyline: MoneylineMarket;
+  spread: SpreadMarket;
+  total: TotalMarket;
+}
+
+export interface OddsBoard {
+  status: FeedStatus;
+  reason: string | null;
+  asOf: string | null;
+  /** Citation printed on the board. Do not paraphrase. */
+  sourceLabel: string | null;
+  week: number | null;
+  sourceBooks: string[];
+  games: GameLine[];
+}
+
+export interface OddsProvider {
+  readonly id: OddsSourceId;
+  readonly label: string;
+  /** Sync read for the baked snapshot. Live API may return EMPTY until fetched. */
+  peekBoard(): OddsBoard;
+  getBoard(): Promise<OddsBoard>;
+}
+
+export const EMPTY_ODDS_BOARD: OddsBoard = {
+  status: "unavailable",
+  reason: "Wednesday snapshot was not provided at build time.",
+  asOf: null,
+  sourceLabel: null,
+  week: null,
+  sourceBooks: [],
+  games: [],
+};
+
+
+===== src/lib/odds/snapshot.ts =====
+
+/**
+ * Dated BetMGM Week 1 spread snapshot.
+ *
+ * Source (print exactly, do not paraphrase):
+ * USA Today, odds courtesy of BetMGM as of Tuesday Sep 8, 2026, 10:45 a.m. ET
+ *
+ * Spreads only. Moneyline, total, and juice are null on every game — do not
+ * invent them. One book: BetMGM. No Caesars. Not a live scrape.
+ *
+ * Opener is SEA -3 from this USA Today board. Do not overlay Sporting News
+ * SEA -3.5 / moneyline / total.
+ *
+ * PROTOTYPE. Simulation only. No real money. Production: The Odds API +
+ * Supabase (swap ACTIVE_ODDS_PROVIDER in ./index.ts).
+ */
+
+import type { TeamAbbr } from "@/lib/nfl/teams";
+import type { GameLine, OddsBoard } from "./types";
+
+export const SNAPSHOT_SOURCE_LABEL =
+  "USA Today, odds courtesy of BetMGM as of Tuesday Sep 8, 2026, 10:45 a.m. ET";
+
+const BLANK_ML = { home: null, away: null, draw: null };
+const BLANK_TOTAL = { line: null, overJuice: null, underJuice: null };
+
+function spreadGame(input: {
+  id: string;
+  kickoffLabel: string;
+  startTime: string;
+  away: TeamAbbr;
+  home: TeamAbbr;
+  favorite: TeamAbbr;
+  spread: number;
+  venue?: string | null;
+  neutralSite?: boolean;
+  opener?: boolean;
+}): GameLine {
+  const mag = Math.abs(input.spread);
+  const favHome = input.favorite === input.home;
+  return {
+    id: input.id,
+    startTime: input.startTime,
+    kickoffLabel: input.kickoffLabel,
+    week: 1,
+    home: input.home,
+    away: input.away,
+    book: "BetMGM",
+    venue: input.venue ?? null,
+    neutralSite: Boolean(input.neutralSite),
+    opener: Boolean(input.opener),
+    moneyline: BLANK_ML,
+    spread: {
+      homeLine: favHome ? -mag : mag,
+      awayLine: favHome ? mag : -mag,
+      homeJuice: null,
+      awayJuice: null,
+    },
+    total: BLANK_TOTAL,
+  };
+}
+
+export const SNAPSHOT_BOARD: OddsBoard = {
+  status: "ready",
+  reason: null,
+  asOf: "2026-09-08T10:45:00-04:00",
+  sourceLabel: SNAPSHOT_SOURCE_LABEL,
+  week: 1,
+  sourceBooks: ["BetMGM"],
+  games: [
+    spreadGame({
+      id: "wk1-ne-sea",
+      kickoffLabel: "Wed Sep 9, 8:20 PM ET",
+      startTime: "2026-09-09T20:20:00-04:00",
+      away: "NE",
+      home: "SEA",
+      favorite: "SEA",
+      spread: 3,
+      opener: true,
+    }),
+    spreadGame({
+      id: "wk1-sf-lar",
+      kickoffLabel: "Thu Sep 10, 8:35 PM ET",
+      startTime: "2026-09-10T20:35:00-04:00",
+      away: "SF",
+      home: "LAR",
+      favorite: "LAR",
+      spread: 3.5,
+      venue: "Melbourne",
+      neutralSite: true,
+    }),
+    spreadGame({
+      id: "wk1-buf-hou",
+      kickoffLabel: "Sun Sep 13, 1:00 PM ET",
+      startTime: "2026-09-13T13:00:00-04:00",
+      away: "BUF",
+      home: "HOU",
+      favorite: "BUF",
+      spread: 1,
+    }),
+    spreadGame({
+      id: "wk1-chi-car",
+      kickoffLabel: "Sun Sep 13, 1:00 PM ET",
+      startTime: "2026-09-13T13:00:00-04:00",
+      away: "CHI",
+      home: "CAR",
+      favorite: "CHI",
+      spread: 3,
+    }),
+    spreadGame({
+      id: "wk1-tb-cin",
+      kickoffLabel: "Sun Sep 13, 1:00 PM ET",
+      startTime: "2026-09-13T13:00:00-04:00",
+      away: "TB",
+      home: "CIN",
+      favorite: "CIN",
+      spread: 3.5,
+    }),
+    spreadGame({
+      id: "wk1-no-det",
+      kickoffLabel: "Sun Sep 13, 1:00 PM ET",
+      startTime: "2026-09-13T13:00:00-04:00",
+      away: "NO",
+      home: "DET",
+      favorite: "DET",
+      spread: 7,
+    }),
+    spreadGame({
+      id: "wk1-nyj-ten",
+      kickoffLabel: "Sun Sep 13, 1:00 PM ET",
+      startTime: "2026-09-13T13:00:00-04:00",
+      away: "NYJ",
+      home: "TEN",
+      favorite: "TEN",
+      spread: 1.5,
+    }),
+    spreadGame({
+      id: "wk1-bal-ind",
+      kickoffLabel: "Sun Sep 13, 1:00 PM ET",
+      startTime: "2026-09-13T13:00:00-04:00",
+      away: "BAL",
+      home: "IND",
+      favorite: "BAL",
+      spread: 3.5,
+    }),
+    spreadGame({
+      id: "wk1-atl-pit",
+      kickoffLabel: "Sun Sep 13, 1:00 PM ET",
+      startTime: "2026-09-13T13:00:00-04:00",
+      away: "ATL",
+      home: "PIT",
+      favorite: "PIT",
+      spread: 3.5,
+    }),
+    spreadGame({
+      id: "wk1-cle-jax",
+      kickoffLabel: "Sun Sep 13, 1:00 PM ET",
+      startTime: "2026-09-13T13:00:00-04:00",
+      away: "CLE",
+      home: "JAX",
+      favorite: "JAX",
+      spread: 8.5,
+    }),
+    spreadGame({
+      id: "wk1-gb-min",
+      kickoffLabel: "Sun Sep 13, 4:25 PM ET",
+      startTime: "2026-09-13T16:25:00-04:00",
+      away: "GB",
+      home: "MIN",
+      favorite: "MIN",
+      spread: 1.5,
+    }),
+    spreadGame({
+      id: "wk1-was-phi",
+      kickoffLabel: "Sun Sep 13, 4:25 PM ET",
+      startTime: "2026-09-13T16:25:00-04:00",
+      away: "WAS",
+      home: "PHI",
+      favorite: "PHI",
+      spread: 4.5,
+    }),
+    spreadGame({
+      id: "wk1-mia-lv",
+      kickoffLabel: "Sun Sep 13, 4:25 PM ET",
+      startTime: "2026-09-13T16:25:00-04:00",
+      away: "MIA",
+      home: "LV",
+      favorite: "LV",
+      spread: 3.5,
+    }),
+    spreadGame({
+      id: "wk1-ari-lac",
+      kickoffLabel: "Sun Sep 13, 4:25 PM ET",
+      startTime: "2026-09-13T16:25:00-04:00",
+      away: "ARI",
+      home: "LAC",
+      favorite: "LAC",
+      spread: 9,
+    }),
+    spreadGame({
+      id: "wk1-dal-nyg",
+      kickoffLabel: "Sun Sep 13, 8:20 PM ET",
+      startTime: "2026-09-13T20:20:00-04:00",
+      away: "DAL",
+      home: "NYG",
+      favorite: "DAL",
+      spread: 3,
+    }),
+    spreadGame({
+      id: "wk1-den-kc",
+      kickoffLabel: "Mon Sep 14, 8:15 PM ET",
+      startTime: "2026-09-14T20:15:00-04:00",
+      away: "DEN",
+      home: "KC",
+      favorite: "KC",
+      spread: 2.5,
+    }),
+  ],
+};
+
+
+===== src/lib/odds/snapshot-provider.ts =====
+
+import { SNAPSHOT_BOARD } from "./snapshot";
+import type { OddsBoard, OddsProvider } from "./types";
+
+export const snapshotOddsProvider: OddsProvider = {
+  id: "snapshot",
+  label: "BetMGM snapshot",
+  peekBoard(): OddsBoard {
+    return SNAPSHOT_BOARD;
+  },
+  async getBoard(): Promise<OddsBoard> {
+    return SNAPSHOT_BOARD;
+  },
+};
+
+
+===== src/lib/odds/live-provider.ts =====
+
+/**
+ * Stub for The Odds API.
+ *
+ * Swap ACTIVE_ODDS_PROVIDER in ./index.ts to this object when a live key
+ * exists. Map API events onto GameLine (home/away TeamAbbr, American odds,
+ * spread line + juice, total line + juice). Do not change board UI.
+ *
+ * PROTOTYPE: not wired. No paid feed. Production: live The Odds API +
+ * Supabase for persistence.
+ */
+
+import { EMPTY_ODDS_BOARD } from "./types";
+import type { OddsBoard, OddsProvider } from "./types";
+
+const UNAVAILABLE: OddsBoard = {
+  ...EMPTY_ODDS_BOARD,
+  status: "unavailable",
+  reason: "The Odds API is not wired in this prototype.",
+  sourceBooks: [],
+};
+
+export const theOddsApiProvider: OddsProvider = {
+  id: "the-odds-api",
+  label: "The Odds API",
+  peekBoard(): OddsBoard {
+    return UNAVAILABLE;
+  },
+  async getBoard(): Promise<OddsBoard> {
+    return UNAVAILABLE;
+  },
+};
+
+
+===== src/lib/scores/index.ts =====
+
+/**
+ * Scores module — the only import path the UI should use.
+ *
+ * Swap ACTIVE_SCORES_PROVIDER to `theOddsApiScoresProvider` when a paid
+ * feed is wired. Ticker / cards / slips consume ScoreBoard and never ESPN
+ * or snapshot files.
+ *
+ * PROTOTYPE: ESPN public scoreboard (unofficial). Production: paid scores
+ * feed (The Odds API or similar) + Supabase.
+ */
+
+import { espnScoresProvider } from "./espn-provider";
+import type { ScoreBoard, ScoresProvider } from "./types";
+
+export type {
+  GameScore,
+  ScoreBoard,
+  ScorePhase,
+  ScoresProvider,
+  ScoresSourceId,
+} from "./types";
+
+export {
+  EMPTY_SCORE_BOARD,
+  SCORES_UNAVAILABLE,
+  boardHasInProgress,
+  unavailableScoreBoard,
+} from "./types";
+export { liveLine, scorePair } from "./format";
+export { theOddsApiScoresProvider } from "./live-provider";
+export { snapshotScoresProvider } from "./snapshot-provider";
+export { espnScoresProvider };
+
+/** Active feed. Change this one binding to replace ESPN with a paid source. */
+export const ACTIVE_SCORES_PROVIDER: ScoresProvider = espnScoresProvider;
+
+export function peekScoreBoard(): ScoreBoard {
+  return ACTIVE_SCORES_PROVIDER.peekBoard();
+}
+
+export function loadScoreBoard(): Promise<ScoreBoard> {
+  return ACTIVE_SCORES_PROVIDER.getBoard();
+}
+
+
+===== src/lib/scores/types.ts =====
+
+/**
+ * Canonical scores contract.
+ *
+ * UI must depend on these types + ScoresProvider only. ESPN public
+ * scoreboard and a future paid feed (The Odds API scores, or similar)
+ * both map into GameScore so the ticker, game cards, and tickets never
+ * change when the feed is swapped.
+ *
+ * Prototype statuses:
+ *   snapshot — frozen score from a bake
+ *   pending  — on the slate (pregame or in progress)
+ *   final    — game complete
+ *
+ * PROTOTYPE: unofficial ESPN feed, no paid data, no real money.
+ * Production: paid live feed + Supabase.
+ */
+
+import type { TeamAbbr } from "@/lib/nfl/teams";
+import type { FeedStatus } from "@/lib/odds/types";
+
+export type ScorePhase = "snapshot" | "pending" | "final";
+
+export type ScoresSourceId = "snapshot" | "espn" | "the-odds-api";
+
+export interface GameScore {
+  gameId: string;
+  home: TeamAbbr;
+  away: TeamAbbr;
+  homeScore: number | null;
+  awayScore: number | null;
+  phase: ScorePhase;
+  inProgress: boolean;
+  clock: string | null;
+  quarter: string | null;
+}
+
+export interface ScoreBoard {
+  status: FeedStatus;
+  reason: string | null;
+  asOf: string | null;
+  games: GameScore[];
+}
+
+export interface ScoresProvider {
+  readonly id: ScoresSourceId;
+  readonly label: string;
+  peekBoard(): ScoreBoard;
+  getBoard(): Promise<ScoreBoard>;
+}
+
+export const EMPTY_SCORE_BOARD: ScoreBoard = {
+  status: "unavailable",
+  reason: "Scores unavailable",
+  asOf: null,
+  games: [],
+};
+
+export const SCORES_UNAVAILABLE = "Scores unavailable";
+
+export function unavailableScoreBoard(): ScoreBoard {
+  return {
+    status: "error",
+    reason: SCORES_UNAVAILABLE,
+    asOf: null,
+    games: [],
+  };
+}
+
+export function boardHasInProgress(board: ScoreBoard): boolean {
+  return board.games.some((game) => game.inProgress);
+}
+
+
+===== src/lib/scores/format.ts =====
+
+/**
+ * Display helpers for ScoreBoard. Do not invent numbers.
+ */
+
+import type { GameScore } from "./types";
+
+export function scorePair(game: GameScore): string | null {
+  if (game.awayScore === null || game.homeScore === null) return null;
+  return `${game.awayScore}–${game.homeScore}`;
+}
+
+/** Quarter · clock · score for ticker, cards, and open tickets. */
+export function liveLine(game: GameScore): string {
+  const pair = scorePair(game);
+  if (game.inProgress) {
+    const bits: string[] = [pair ?? "Unavailable"];
+    if (game.quarter) bits.push(game.quarter);
+    if (game.clock) bits.push(game.clock);
+    return bits.join(" · ");
+  }
+  if (game.phase === "final") {
+    return pair ? `${pair} · Final` : "Final unavailable";
+  }
+  if (game.phase === "pending") return "Pending";
+  return "Unavailable";
+}
+
+
+===== src/lib/scores/espn.server.ts =====
+
+/**
+ * Server-only ESPN public scoreboard fetch.
+ *
+ * Unofficial feed. Can break or change without notice.
+ * Every call is try/caught — never throw to the UI.
+ *
+ * Contracted source (no API key):
+ *   https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard
+ *
+ * PROTOTYPE. Production: paid live feed + Supabase.
+ */
+
+import { mapEspnScoreboard } from "./espn-map";
+import { unavailableScoreBoard, type ScoreBoard } from "./types";
+
+export const ESPN_SCOREBOARD_URL =
+  "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+
+const ESPN_URLS = [
+  ESPN_SCOREBOARD_URL,
+  `${ESPN_SCOREBOARD_URL}?limit=50&seasontype=2`,
+  "https://cdn.espn.com/core/nfl/scoreboard?xhr=1",
+];
+
+const HEADERS = {
+  Accept: "application/json,text/plain,*/*",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+  Referer: "https://www.espn.com/nfl/scoreboard",
+  Origin: "https://www.espn.com",
+};
+
+const TIMEOUT_MS = 10_000;
+
+async function getJson(url: string): Promise<unknown> {
+  const res = await fetch(url, {
+    headers: HEADERS,
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    throw new Error(`ESPN HTTP ${res.status}`);
+  }
+  try {
+    return await res.json();
+  } catch {
+    throw new Error("ESPN payload was not JSON");
+  }
+}
+
+export async function fetchEspnBoard(): Promise<ScoreBoard> {
+  try {
+    for (const url of ESPN_URLS) {
+      try {
+        const payload = await getJson(url);
+        let board: ScoreBoard;
+        try {
+          board = mapEspnScoreboard(payload);
+        } catch {
+          continue;
+        }
+        if (board.status === "ready" && board.games.length > 0) return board;
+      } catch {
+        // Try the next URL. Unofficial feed — failures are expected.
+      }
+    }
+    return unavailableScoreBoard();
+  } catch {
+    return unavailableScoreBoard();
+  }
+}
+
+
+===== src/lib/scores/espn-map.ts =====
+
+/**
+ * Map ESPN public scoreboard JSON onto ScoreBoard.
+ * Do not invent scores. Pregame 0–0 is treated as not posted.
+ *
+ * PROTOTYPE. Swap this mapper if the ESPN payload shape changes.
+ */
+
+import { isTeamAbbr, type TeamAbbr } from "@/lib/nfl/teams";
+import { SNAPSHOT_BOARD } from "@/lib/odds/snapshot";
+import type { GameScore, ScoreBoard, ScorePhase } from "./types";
+
+const ESPN_ABBR: Record<string, TeamAbbr> = {
+  WSH: "WAS",
+  WAS: "WAS",
+  GNB: "GB",
+  GB: "GB",
+  JAC: "JAX",
+  JAX: "JAX",
+  ARZ: "ARI",
+  ARI: "ARI",
+  NWE: "NE",
+  NE: "NE",
+  NOR: "NO",
+  NO: "NO",
+  SFO: "SF",
+  SF: "SF",
+  TAM: "TB",
+  TB: "TB",
+  KAN: "KC",
+  KC: "KC",
+  LVR: "LV",
+  LV: "LV",
+  LAR: "LAR",
+  LAC: "LAC",
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function str(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function num(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+export function mapEspnAbbr(raw: string | null): TeamAbbr | null {
+  if (!raw) return null;
+  const key = raw.toUpperCase();
+  if (ESPN_ABBR[key]) return ESPN_ABBR[key];
+  return isTeamAbbr(key) ? key : null;
+}
+
+function slateGameId(home: TeamAbbr, away: TeamAbbr): string {
+  const hit = SNAPSHOT_BOARD.games.find((game) => game.home === home && game.away === away);
+  if (hit) return hit.id;
+  const flip = SNAPSHOT_BOARD.games.find(
+    (game) => game.neutralSite && game.home === away && game.away === home,
+  );
+  if (flip) return flip.id;
+  return `espn-${away}-${home}`;
+}
+
+function extractEvents(root: unknown): unknown[] {
+  try {
+    const rec = asRecord(root);
+    const preferred = [
+      asArray(asRecord(asRecord(rec?.content)?.sbData)?.events),
+      asArray(asRecord(rec?.sbData)?.events),
+      asArray(rec?.events),
+      asArray(asRecord(asArray(asRecord(asArray(rec?.sports)[0])?.leagues)[0])?.events),
+    ];
+    for (const list of preferred) {
+      if (list.length > 0) return list;
+    }
+
+    const seen = new Set<unknown>();
+    const found: unknown[] = [];
+    const walk = (node: unknown, depth: number) => {
+      if (depth > 8 || node === null || typeof node !== "object") return;
+      if (seen.has(node)) return;
+      seen.add(node);
+      if (Array.isArray(node)) {
+        if (
+          node.length > 0 &&
+          node.every((item) => {
+            const row = asRecord(item);
+            return row !== null && "competitions" in row;
+          })
+        ) {
+          found.push(...node);
+          return;
+        }
+        for (const item of node) walk(item, depth + 1);
+        return;
+      }
+      for (const value of Object.values(node)) walk(value, depth + 1);
+    };
+    walk(root, 0);
+    return found;
+  } catch {
+    return [];
+  }
+}
+
+function mapEvent(raw: unknown): GameScore | null {
+  const event = asRecord(raw);
+  if (!event) return null;
+  const competition = asRecord(asArray(event.competitions)[0]) ?? event;
+  const competitors = asArray(competition.competitors);
+  let homeAbbr: TeamAbbr | null = null;
+  let awayAbbr: TeamAbbr | null = null;
+  let homeRaw: number | null = null;
+  let awayRaw: number | null = null;
+
+  for (const item of competitors) {
+    const rec = asRecord(item);
+    if (!rec) continue;
+    const team = asRecord(rec.team);
+    const abbr = mapEspnAbbr(str(team?.abbreviation));
+    if (!abbr) continue;
+    const side = str(rec.homeAway);
+    if (side === "home") {
+      homeAbbr = abbr;
+      homeRaw = num(rec.score);
+    } else if (side === "away") {
+      awayAbbr = abbr;
+      awayRaw = num(rec.score);
+    }
+  }
+
+  if (!homeAbbr || !awayAbbr) return null;
+
+  const status = asRecord(competition.status) ?? asRecord(event.status);
+  const type = asRecord(status?.type);
+  const state = (str(type?.state) ?? "").toLowerCase();
+  const completed = type?.completed === true || state === "post";
+  const inProgress = state === "in";
+
+  let phase: ScorePhase = "pending";
+  if (completed) phase = "final";
+
+  const homeScore = inProgress || completed ? homeRaw : null;
+  const awayScore = inProgress || completed ? awayRaw : null;
+
+  const period = num(status?.period);
+  let quarter: string | null = null;
+  if (inProgress || completed) {
+    if (period !== null && period > 4) quarter = period === 5 ? "OT" : `OT${period - 4}`;
+    else if (period !== null && period > 0) quarter = `Q${period}`;
+    else if (completed) quarter = "Final";
+  }
+
+  const clock = inProgress ? str(status?.displayClock) : null;
+
+  return {
+    gameId: slateGameId(homeAbbr, awayAbbr),
+    home: homeAbbr,
+    away: awayAbbr,
+    homeScore,
+    awayScore,
+    phase,
+    inProgress,
+    clock,
+    quarter,
+  };
+}
+
+export function mapEspnScoreboard(payload: unknown): ScoreBoard {
+  try {
+    const events = extractEvents(payload);
+    const games: GameScore[] = [];
+    const seen = new Set<string>();
+    for (const event of events) {
+      try {
+        const mapped = mapEvent(event);
+        if (!mapped || seen.has(mapped.gameId)) continue;
+        seen.add(mapped.gameId);
+        games.push(mapped);
+      } catch {
+        // Skip a bad event; unofficial feed can change shape.
+      }
+    }
+
+    if (games.length === 0) {
+      return {
+        status: "unavailable",
+        reason: "Scores unavailable",
+        asOf: new Date().toISOString(),
+        games: [],
+      };
+    }
+
+    return {
+      status: "ready",
+      reason: null,
+      asOf: new Date().toISOString(),
+      games,
+    };
+  } catch {
+    return {
+      status: "error",
+      reason: "Scores unavailable",
+      asOf: null,
+      games: [],
+    };
+  }
+}
+
+
+===== src/lib/scores/espn-provider.ts =====
+
+/**
+ * Current live scores source — ESPN public scoreboard (unofficial).
+ *
+ * Swap ACTIVE_SCORES_PROVIDER in ./index.ts to `theOddsApiScoresProvider`
+ * (or another ScoresProvider) without touching ticker / cards / slips.
+ * Fail-soft: errors never throw.
+ */
+
+import { fetchEspnScoreBoard } from "./fetch-espn";
+import { unavailableScoreBoard, type ScoresProvider } from "./types";
+
+const IDLE = unavailableScoreBoard();
+
+export const espnScoresProvider: ScoresProvider = {
+  id: "espn",
+  label: "ESPN scoreboard",
+  peekBoard() {
+    return IDLE;
+  },
+  async getBoard() {
+    try {
+      return await fetchEspnScoreBoard();
+    } catch {
+      return unavailableScoreBoard();
+    }
+  },
+};
+
+
+===== src/lib/scores/fetch-espn.ts =====
+
+/**
+ * Server function for the ESPN scores layer.
+ * Unofficial feed. Every call is fail-soft — never throw.
+ */
+
+import { createServerFn } from "@tanstack/react-start";
+import type { ScoreBoard } from "./types";
+import { unavailableScoreBoard } from "./types";
+
+export const fetchEspnScoreBoard = createServerFn({ method: "GET" }).handler(
+  async (): Promise<ScoreBoard> => {
+    try {
+      const { fetchEspnBoard } = await import("./espn.server.ts");
+      return await fetchEspnBoard();
+    } catch {
+      return unavailableScoreBoard();
+    }
+  },
+);
+
+
+===== src/lib/scores/live-provider.ts =====
+
+/**
+ * Stub for a paid scores feed (The Odds API scores, or similar).
+ *
+ * Swap ACTIVE_SCORES_PROVIDER in ./index.ts to this object when a live key
+ * exists. Map API events onto GameScore (home/away TeamAbbr, phase, clock,
+ * quarter, scores). Do not change ticker, game cards, or tickets.
+ *
+ * PROTOTYPE: not wired. Current live source is espnScoresProvider.
+ * Production: paid scores feed + Supabase.
+ */
+
+import { unavailableScoreBoard, type ScoreBoard, type ScoresProvider } from "./types";
+
+const UNAVAILABLE: ScoreBoard = unavailableScoreBoard();
+
+export const theOddsApiScoresProvider: ScoresProvider = {
+  id: "the-odds-api",
+  label: "The Odds API scores",
+  peekBoard(): ScoreBoard {
+    return UNAVAILABLE;
+  },
+  async getBoard(): Promise<ScoreBoard> {
+    return UNAVAILABLE;
+  },
+};
+
+
+===== src/lib/scores/snapshot.ts =====
+
+/**
+ * Score snapshot baked at build time.
+ *
+ * Leave empty until a real snapshot is inserted. Do not invent scores.
+ *
+ * PROTOTYPE. Production: swap ./index.ts to a live scores API. Supabase
+ * planned for persisted finals / ticket settlement.
+ */
+
+import { EMPTY_SCORE_BOARD } from "./types";
+import type { ScoreBoard } from "./types";
+
+export const SNAPSHOT_SCORES: ScoreBoard = {
+  ...EMPTY_SCORE_BOARD,
+  status: "unavailable",
+  reason: "Score snapshot was not provided at build time.",
+  games: [],
+};
+
+
+===== src/lib/scores/snapshot-provider.ts =====
+
+import { SNAPSHOT_SCORES } from "./snapshot";
+import type { ScoreBoard, ScoresProvider } from "./types";
+
+export const snapshotScoresProvider: ScoresProvider = {
+  id: "snapshot",
+  label: "Go Birds score snapshot",
+  peekBoard(): ScoreBoard {
+    return SNAPSHOT_SCORES;
+  },
+  async getBoard(): Promise<ScoreBoard> {
+    return SNAPSHOT_SCORES;
+  },
+};
+
+
+===== src/lib/fantasy/index.ts =====
+
+/**
+ * Fantasy module — UI imports roster from here only.
+ *
+ * PROTOTYPE. Production: live roster + Supabase.
+ */
+
+import { ROSTER } from "./roster";
+import type { FantasyRoster } from "./types";
+
+export type {
+  FantasyFeedStatus,
+  FantasyPlayer,
+  FantasyPosition,
+  FantasyRoster,
+  LineupSlot,
+} from "./types";
+
+export { EMPTY_LINEUP, EMPTY_ROSTER } from "./types";
+
+export function loadRoster(): FantasyRoster {
+  return ROSTER;
+}
+
+
+===== src/lib/fantasy/types.ts =====
+
+/**
+ * Fantasy roster contract.
+ *
+ * Slots exist so the tracker UI can render a lineup card even when no
+ * players have been provided. Do not invent player names.
+ *
+ * PROTOTYPE. Production: roster from league source, persisted in Supabase.
+ */
+
+import type { TeamAbbr } from "@/lib/nfl/teams";
+
+export type FantasyPosition = "QB" | "RB" | "WR" | "TE" | "FLEX" | "K" | "DEF" | "BN";
+
+export type FantasyFeedStatus = "ready" | "unavailable";
+
+export interface FantasyPlayer {
+  id: string;
+  name: string;
+  team: TeamAbbr | null;
+  position: Exclude<FantasyPosition, "FLEX" | "BN">;
+  /** Injury / availability as provided. Do not invent. */
+  status: string | null;
+}
+
+export interface LineupSlot {
+  id: string;
+  position: FantasyPosition;
+  label: string;
+  note: string | null;
+  player: FantasyPlayer | null;
+}
+
+export interface FantasyRoster {
+  status: FantasyFeedStatus;
+  reason: string | null;
+  league: string;
+  yahooId: string | null;
+  ownerLabel: string | null;
+  slots: LineupSlot[];
+  bench: LineupSlot[];
+}
+
+export const EMPTY_LINEUP: LineupSlot[] = [
+  { id: "qb", position: "QB", label: "QB", note: null, player: null },
+  { id: "rb1", position: "RB", label: "RB", note: null, player: null },
+  { id: "rb2", position: "RB", label: "RB", note: null, player: null },
+  { id: "wr1", position: "WR", label: "WR", note: null, player: null },
+  { id: "wr2", position: "WR", label: "WR", note: null, player: null },
+  { id: "te", position: "TE", label: "TE", note: null, player: null },
+  { id: "flex", position: "FLEX", label: "FLEX", note: null, player: null },
+  { id: "k", position: "K", label: "K", note: null, player: null },
+  { id: "def", position: "DEF", label: "DEF", note: null, player: null },
+];
+
+export const EMPTY_ROSTER: FantasyRoster = {
+  status: "unavailable",
+  reason: "Fantasy roster was not provided at build time.",
+  league: "League of Eastside Legends",
+  yahooId: null,
+  ownerLabel: null,
+  slots: EMPTY_LINEUP,
+  bench: [],
+};
+
+
+===== src/lib/fantasy/roster.ts =====
+
+/**
+ * Baked Eastside Legends roster — League of Eastside Legends, Yahoo 288732.
+ *
+ * Inserted from the provided lineup only. Do not invent extra players,
+ * scores, or an opponent column.
+ *
+ * PROTOTYPE. Simulation only. No real money. Production: league roster
+ * feed + Supabase.
+ */
+
+import type { FantasyPlayer, FantasyRoster, LineupSlot } from "./types";
+import type { TeamAbbr } from "@/lib/nfl/teams";
+
+function player(
+  id: string,
+  name: string,
+  team: TeamAbbr,
+  position: FantasyPlayer["position"],
+  status: string | null = null,
+): FantasyPlayer {
+  return { id, name, team, position, status };
+}
+
+function slot(
+  id: string,
+  position: LineupSlot["position"],
+  p: FantasyPlayer,
+  note: string | null = null,
+): LineupSlot {
+  return { id, position, label: position, note, player: p };
+}
+
+export const ROSTER: FantasyRoster = {
+  status: "ready",
+  reason: null,
+  league: "League of Eastside Legends",
+  yahooId: "288732",
+  ownerLabel: "Rob's board",
+  slots: [
+    slot("qb", "QB", player("dak-prescott", "Dak Prescott", "DAL", "QB")),
+    slot("rb1", "RB", player("bucky-irving", "Bucky Irving", "TB", "RB")),
+    slot("rb2", "RB", player("jk-dobbins", "J.K. Dobbins", "DEN", "RB")),
+    slot("wr1", "WR", player("amon-ra-st-brown", "Amon-Ra St. Brown", "DET", "WR")),
+    slot("wr2", "WR", player("jamarr-chase", "Ja'Marr Chase", "CIN", "WR", "Q")),
+    slot("te", "TE", player("colston-loveland", "Colston Loveland", "CHI", "TE")),
+    slot(
+      "flex",
+      "FLEX",
+      player("dallas-goedert", "Dallas Goedert", "PHI", "TE"),
+      "WRT flex",
+    ),
+    slot("k", "K", player("jake-elliott", "Jake Elliott", "PHI", "K")),
+    slot("def", "DEF", player("packers-def", "Packers DEF", "GB", "DEF")),
+  ],
+  bench: [
+    slot(
+      "bn1",
+      "BN",
+      player("treveyon-henderson", "TreVeyon Henderson", "NE", "RB", "Out, ankle"),
+    ),
+    slot("bn2", "BN", player("calvin-ridley", "Calvin Ridley", "TEN", "WR")),
+    slot("bn3", "BN", player("kenneth-gainwell", "Kenneth Gainwell", "TB", "RB")),
+    slot("bn4", "BN", player("alec-pierce", "Alec Pierce", "IND", "WR")),
+  ],
+};
+
+
+===== src/lib/betting/store.ts =====
+
+/**
+ * Simulated sportsbook state — bankroll, slip, tickets.
+ * Client-only localStorage. No real money.
+ *
+ * PROTOTYPE. Production: persist tickets and bankroll in Supabase; odds and
+ * scores stay on their swappable provider modules.
+ */
+
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { combineAmerican, toWin } from "./american";
+import { round2, uid } from "@/lib/utils";
+
+export type MarketKind = "spread" | "moneyline" | "total";
+export type SelectionSide = "home" | "away" | "over" | "under";
+export type TicketStatus = "open" | "won" | "lost" | "push" | "void";
+export type BookTab = "board" | "tickets" | "fantasy" | "house";
+
+export interface BetLeg {
+  id: string;
+  gameId: string;
+  label: string;
+  market: MarketKind;
+  side: SelectionSide;
+  line: number | null;
+  odds: number | null;
+  book: string | null;
+}
+
+export interface Ticket {
+  id: string;
+  placedAt: string;
+  legs: BetLeg[];
+  stake: number;
+  americanOdds: number | null;
+  toWin: number | null;
+  priced: boolean;
+  status: TicketStatus;
+}
+
+export const STARTING_BANKROLL = 10_000;
+export const STAKE_PRESETS = [25, 50, 100, 250, 500, 1000] as const;
+
+function isPricedOdds(odds: number | null | undefined): odds is number {
+  return odds !== null && odds !== undefined && Number.isFinite(odds) && odds !== 0;
+}
+
+interface BookState {
+  bankroll: number;
+  slip: BetLeg[];
+  stake: number;
+  tickets: Ticket[];
+  tab: BookTab;
+  slipOpen: boolean;
+  notice: string | null;
+  addLeg: (leg: Omit<BetLeg, "id">) => void;
+  removeLeg: (id: string) => void;
+  clearSlip: () => void;
+  setStake: (n: number) => void;
+  placeBet: () => void;
+  setTab: (tab: BookTab) => void;
+  setSlipOpen: (open: boolean) => void;
+  clearNotice: () => void;
+  resetBook: () => void;
+}
+
+export const useBook = create<BookState>()(
+  persist(
+    (set, get) => ({
+      bankroll: STARTING_BANKROLL,
+      slip: [],
+      stake: 100,
+      tickets: [],
+      tab: "board",
+      slipOpen: false,
+      notice: null,
+      addLeg: (leg) => {
+        const spreadPosted = leg.market === "spread" && leg.line !== null;
+        if (!isPricedOdds(leg.odds) && !spreadPosted) {
+          set({ notice: "That market is unavailable — no line posted." });
+          return;
+        }
+        const existing = get().slip.find(
+          (item) => item.gameId === leg.gameId && item.market === leg.market,
+        );
+        const next: BetLeg = { ...leg, id: uid("leg") };
+        const slip = existing
+          ? get().slip.map((item) => (item.id === existing.id ? { ...next, id: existing.id } : item))
+          : [...get().slip, next];
+        set({ slip, notice: null, slipOpen: true });
+      },
+      removeLeg: (id) => set({ slip: get().slip.filter((leg) => leg.id !== id) }),
+      clearSlip: () => set({ slip: [] }),
+      setStake: (n) => {
+        const stake = Math.max(0, round2(n));
+        set({ stake });
+      },
+      placeBet: () => {
+        const { slip, stake, bankroll } = get();
+        if (slip.length === 0) {
+          set({ notice: "Add a posted line to the slip first." });
+          return;
+        }
+        if (stake <= 0) {
+          set({ notice: "Enter a stake greater than zero." });
+          return;
+        }
+        if (stake > bankroll) {
+          set({ notice: "Stake is larger than the simulated bankroll." });
+          return;
+        }
+        const priced = slip.every((leg) => isPricedOdds(leg.odds));
+        const americanOdds = priced ? combineAmerican(slip.map((leg) => leg.odds as number)) : null;
+        const win = priced && americanOdds !== null ? toWin(stake, americanOdds) : null;
+        const ticket: Ticket = {
+          id: uid("tkt"),
+          placedAt: new Date().toISOString(),
+          legs: slip,
+          stake,
+          americanOdds,
+          toWin: win,
+          priced,
+          status: "open",
+        };
+        set({
+          bankroll: round2(bankroll - stake),
+          tickets: [ticket, ...get().tickets],
+          slip: [],
+          notice: priced
+            ? null
+            : "Ticket booked unpriced — juice was not on this BetMGM snapshot. Simulation only.",
+          tab: "tickets",
+          slipOpen: false,
+        });
+      },
+      setTab: (tab) => set({ tab, slipOpen: false }),
+      setSlipOpen: (slipOpen) => set({ slipOpen }),
+      clearNotice: () => set({ notice: null }),
+      resetBook: () =>
+        set({
+          bankroll: STARTING_BANKROLL,
+          slip: [],
+          stake: 100,
+          tickets: [],
+          notice: null,
+        }),
+    }),
+    {
+      name: "eastside-legends-sim",
+      partialize: (state) => ({
+        bankroll: state.bankroll,
+        slip: state.slip,
+        stake: state.stake,
+        tickets: state.tickets,
+      }),
+    },
+  ),
+);
+
+
+===== src/lib/betting/american.ts =====
+
+import { round2 } from "@/lib/utils";
+
+export function americanToDecimal(american: number): number {
+  if (!Number.isFinite(american) || american === 0) return 1;
+  if (american > 0) return american / 100 + 1;
+  return 100 / Math.abs(american) + 1;
+}
+
+export function decimalToAmerican(decimal: number): number {
+  if (!Number.isFinite(decimal) || decimal <= 1) return 0;
+  if (decimal >= 2) return Math.round((decimal - 1) * 100);
+  return Math.round(-100 / (decimal - 1));
+}
+
+export function combineAmerican(odds: number[]): number {
+  if (odds.length === 0) return 0;
+  const decimal = odds.reduce((acc, n) => acc * americanToDecimal(n), 1);
+  return decimalToAmerican(decimal);
+}
+
+export function toWin(stake: number, american: number): number {
+  if (stake <= 0 || !Number.isFinite(american) || american === 0) return 0;
+  return round2(stake * (americanToDecimal(american) - 1));
+}
+
+export function formatAmerican(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "Unavailable";
+  const rounded = Math.round(n);
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
+}
+
+export function formatSpreadLine(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "Unavailable";
+  if (n === 0) return "PK";
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
+export function formatTotalLine(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "Unavailable";
+  return `${n}`;
+}
+
+
+===== src/lib/feeds/use-feeds.ts =====
+
+/**
+ * Book feeds. Odds and scores are swappable providers — this hook only
+ * reads peek/load from those modules. Do not import ESPN or snapshot files here.
+ */
+
+import { useEffect, useState } from "react";
+import { peekOddsBoard, type OddsBoard } from "@/lib/odds";
+import {
+  boardHasInProgress,
+  loadScoreBoard,
+  peekScoreBoard,
+  SCORES_UNAVAILABLE,
+  unavailableScoreBoard,
+  type ScoreBoard,
+} from "@/lib/scores";
+import { loadRoster, type FantasyRoster } from "@/lib/fantasy";
+
+export interface BookFeeds {
+  odds: OddsBoard;
+  scores: ScoreBoard;
+  roster: FantasyRoster;
+}
+
+const LIVE_MS = 30_000;
+const PREGAME_MS = 30_000;
+const IDLE_MS = 180_000;
+const ERROR_MS = 30_000;
+
+function nextInterval(board: ScoreBoard): number {
+  if (board.status === "error" || board.status === "unavailable") return ERROR_MS;
+  if (boardHasInProgress(board)) return LIVE_MS;
+  if (board.games.some((game) => game.phase === "pending")) return PREGAME_MS;
+  return IDLE_MS;
+}
+
+function failedBoard(prev: ScoreBoard): ScoreBoard {
+  return {
+    ...unavailableScoreBoard(),
+    games: prev.games,
+    reason: SCORES_UNAVAILABLE,
+  };
+}
+
+export function useBookFeeds(initialScores?: ScoreBoard): BookFeeds {
+  const [scores, setScores] = useState<ScoreBoard>(() => initialScores ?? peekScoreBoard());
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let inflight = false;
+
+    const run = async () => {
+      if (cancelled || inflight) return;
+      inflight = true;
+      try {
+        const next = await loadScoreBoard();
+        if (cancelled) return;
+        if (next.status === "ready" && next.games.length > 0) {
+          setScores(next);
+          timer = setTimeout(run, nextInterval(next));
+        } else {
+          setScores((prev) => failedBoard(prev));
+          timer = setTimeout(run, ERROR_MS);
+        }
+      } catch {
+        if (!cancelled) {
+          setScores((prev) => failedBoard(prev));
+          timer = setTimeout(run, ERROR_MS);
+        }
+      } finally {
+        inflight = false;
+      }
+    };
+
+    void run().catch(() => {
+      if (!cancelled) setScores((prev) => failedBoard(prev));
+    });
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  return {
+    odds: peekOddsBoard(),
+    scores,
+    roster: loadRoster(),
+  };
+}
+
+
+===== src/lib/nfl/teams.ts =====
+
+/**
+ * Official NFL club directory — abbreviations and city/name only.
+ * Not a snapshot. Do not add player names, odds, or scores here.
+ */
+
+export const TEAM_ABBRS = [
+  "ARI",
+  "ATL",
+  "BAL",
+  "BUF",
+  "CAR",
+  "CHI",
+  "CIN",
+  "CLE",
+  "DAL",
+  "DEN",
+  "DET",
+  "GB",
+  "HOU",
+  "IND",
+  "JAX",
+  "KC",
+  "LAC",
+  "LAR",
+  "LV",
+  "MIA",
+  "MIN",
+  "NE",
+  "NO",
+  "NYG",
+  "NYJ",
+  "PHI",
+  "PIT",
+  "SEA",
+  "SF",
+  "TB",
+  "TEN",
+  "WAS",
+] as const;
+
+export type TeamAbbr = (typeof TEAM_ABBRS)[number];
+
+export interface NflTeam {
+  abbr: TeamAbbr;
+  city: string;
+  name: string;
+}
+
+export const NFL_TEAMS: Record<TeamAbbr, NflTeam> = {
+  ARI: { abbr: "ARI", city: "Arizona", name: "Cardinals" },
+  ATL: { abbr: "ATL", city: "Atlanta", name: "Falcons" },
+  BAL: { abbr: "BAL", city: "Baltimore", name: "Ravens" },
+  BUF: { abbr: "BUF", city: "Buffalo", name: "Bills" },
+  CAR: { abbr: "CAR", city: "Carolina", name: "Panthers" },
+  CHI: { abbr: "CHI", city: "Chicago", name: "Bears" },
+  CIN: { abbr: "CIN", city: "Cincinnati", name: "Bengals" },
+  CLE: { abbr: "CLE", city: "Cleveland", name: "Browns" },
+  DAL: { abbr: "DAL", city: "Dallas", name: "Cowboys" },
+  DEN: { abbr: "DEN", city: "Denver", name: "Broncos" },
+  DET: { abbr: "DET", city: "Detroit", name: "Lions" },
+  GB: { abbr: "GB", city: "Green Bay", name: "Packers" },
+  HOU: { abbr: "HOU", city: "Houston", name: "Texans" },
+  IND: { abbr: "IND", city: "Indianapolis", name: "Colts" },
+  JAX: { abbr: "JAX", city: "Jacksonville", name: "Jaguars" },
+  KC: { abbr: "KC", city: "Kansas City", name: "Chiefs" },
+  LAC: { abbr: "LAC", city: "Los Angeles", name: "Chargers" },
+  LAR: { abbr: "LAR", city: "Los Angeles", name: "Rams" },
+  LV: { abbr: "LV", city: "Las Vegas", name: "Raiders" },
+  MIA: { abbr: "MIA", city: "Miami", name: "Dolphins" },
+  MIN: { abbr: "MIN", city: "Minnesota", name: "Vikings" },
+  NE: { abbr: "NE", city: "New England", name: "Patriots" },
+  NO: { abbr: "NO", city: "New Orleans", name: "Saints" },
+  NYG: { abbr: "NYG", city: "New York", name: "Giants" },
+  NYJ: { abbr: "NYJ", city: "New York", name: "Jets" },
+  PHI: { abbr: "PHI", city: "Philadelphia", name: "Eagles" },
+  PIT: { abbr: "PIT", city: "Pittsburgh", name: "Steelers" },
+  SEA: { abbr: "SEA", city: "Seattle", name: "Seahawks" },
+  SF: { abbr: "SF", city: "San Francisco", name: "49ers" },
+  TB: { abbr: "TB", city: "Tampa Bay", name: "Buccaneers" },
+  TEN: { abbr: "TEN", city: "Tennessee", name: "Titans" },
+  WAS: { abbr: "WAS", city: "Washington", name: "Commanders" },
+};
+
+export function isTeamAbbr(value: string): value is TeamAbbr {
+  return Object.prototype.hasOwnProperty.call(NFL_TEAMS, value);
+}
+
+export function teamLabel(abbr: TeamAbbr): string {
+  const t = NFL_TEAMS[abbr];
+  return `${t.city} ${t.name}`;
+}
+
+export function teamShort(abbr: TeamAbbr): string {
+  return NFL_TEAMS[abbr].name;
+}
+
+
+===== src/styles.css =====
+
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cinzel", "Times New Roman", serif;
+  --font-sans: "Figtree", "Segoe UI", system-ui, sans-serif;
+
+  --color-felt: #0b2e24;
+  --color-felt-deep: #071c16;
+  --color-felt-raise: #12382c;
+  --color-gold: #c9a227;
+  --color-gold-bright: #e3c56a;
+  --color-cream: #f3ead3;
+  --color-ink: #071612;
+  --color-muted: #b7c4bc;
+  --color-chip-red: #8b2a2a;
+  --color-chip-black: #14110e;
+  --color-win: #7dcea0;
+  --color-loss: #e07a7a;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-quick: 150ms;
+  --motion-fast: 250ms;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-felt);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+.felt-bg {
+  background-color: var(--color-felt);
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(201, 162, 39, 0.07), transparent 42%),
+    radial-gradient(circle at 88% 100%, rgba(7, 28, 22, 0.85), transparent 46%),
+    repeating-radial-gradient(
+      circle at 0 0,
+      rgba(0, 0, 0, 0.08) 0,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.333%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none !important;
+  }
+}
