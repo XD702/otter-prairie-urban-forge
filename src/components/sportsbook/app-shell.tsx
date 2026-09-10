@@ -1,21 +1,28 @@
 import { useEffect, useState } from "react";
+import { AccountBar } from "@/components/sportsbook/account-bar";
 import { Board } from "@/components/sportsbook/board";
 import { BetSlip } from "@/components/sportsbook/bet-slip";
 import { ChipCounter } from "@/components/sportsbook/chip-counter";
 import { FantasyBoard } from "@/components/sportsbook/fantasy-board";
+import { LeagueOffice } from "@/components/sportsbook/league-office";
 import { HouseRules } from "@/components/sportsbook/house-rules";
+import { EeslChallenges } from "@/components/sportsbook/eesl-challenges";
+import { LeagueChat } from "@/components/sportsbook/league-chat";
 import { MyBets } from "@/components/sportsbook/my-bets";
 import { Ticker } from "@/components/sportsbook/ticker";
 import { Button } from "@/components/ui/button";
 import { STARTING_BANKROLL, useBook, type BookTab } from "@/lib/betting/store";
 import { useBookFeeds } from "@/lib/feeds/use-feeds";
 import type { ScoreBoard } from "@/lib/scores";
-import { ClipboardList, LayoutGrid, ScrollText, Users, X } from "lucide-react";
+import { ClipboardList, Coins, LayoutGrid, MessageCircle, ScrollText, Trophy, Users, X } from "lucide-react";
 
 const TABS: { id: BookTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "board", label: "Board", icon: LayoutGrid },
   { id: "tickets", label: "Tickets", icon: ClipboardList },
   { id: "fantasy", label: "Roster", icon: Users },
+  { id: "chat", label: "Chat", icon: MessageCircle },
+  { id: "league", label: "League", icon: Trophy },
+  { id: "challenges", label: "E$L", icon: Coins },
   { id: "house", label: "House", icon: ScrollText },
 ];
 
@@ -31,7 +38,15 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
 
   useEffect(() => {
     setHydrated(true);
-  }, []);
+    try {
+      if (sessionStorage.getItem("eastside-open-chat") === "1") {
+        sessionStorage.removeItem("eastside-open-chat");
+        setTab("chat");
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [setTab]);
 
   const bankroll = hydrated ? storedBankroll : STARTING_BANKROLL;
 
@@ -51,6 +66,7 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <AccountBar />
             <ChipCounter bankroll={bankroll} />
             <a
               href="/eastside-legends-sim-source.zip"
@@ -103,7 +119,10 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
         <main className="min-w-0 pb-24 lg:pb-8">
           {tab === "board" ? <Board odds={feeds.odds} scores={feeds.scores} /> : null}
           {tab === "tickets" ? <MyBets scores={feeds.scores} /> : null}
-          {tab === "fantasy" ? <FantasyBoard roster={feeds.roster} /> : null}
+          {tab === "fantasy" ? <FantasyBoard /> : null}
+          {tab === "chat" ? <LeagueChat /> : null}
+          {tab === "league" ? <LeagueOffice /> : null}
+          {tab === "challenges" ? <EeslChallenges /> : null}
           {tab === "house" ? <HouseRules /> : null}
         </main>
 

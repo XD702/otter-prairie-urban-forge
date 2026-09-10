@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Book feeds. Odds and scores are swappable providers — this hook only
  * reads peek/load from those modules. Do not import ESPN or snapshot files here.
  */
 
 import { useEffect, useState } from "react";
-import { peekOddsBoard, type OddsBoard } from "@/lib/odds";
+import { loadOddsBoard, peekOddsBoard, type OddsBoard } from "@/lib/odds";
 import {
   boardHasInProgress,
   loadScoreBoard,
@@ -42,7 +42,18 @@ function failedBoard(prev: ScoreBoard): ScoreBoard {
 }
 
 export function useBookFeeds(initialScores?: ScoreBoard): BookFeeds {
+  const [odds, setOdds] = useState<OddsBoard>(() => peekOddsBoard());
   const [scores, setScores] = useState<ScoreBoard>(() => initialScores ?? peekScoreBoard());
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadOddsBoard().then((board) => {
+      if (!cancelled) setOdds(board);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,7 +94,7 @@ export function useBookFeeds(initialScores?: ScoreBoard): BookFeeds {
   }, []);
 
   return {
-    odds: peekOddsBoard(),
+    odds,
     scores,
     roster: loadRoster(),
   };

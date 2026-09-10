@@ -11,6 +11,8 @@ import {
   parseAppEnv,
   projectRoot,
   readAppEnv,
+  resolveCommand,
+  resolvePackageBin,
 } from "./with-app-env.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -113,11 +115,55 @@ test("a signal-killed command is never reported as success", async () => {
   );
 });
 
+test("package bin for vite is the js entry, not the cmd shim", () => {
+  const bin = resolvePackageBin("vite", projectRoot());
+  assert.ok(bin);
+  assert.match(bin.replaceAll("\\", "/"), /\/vite\/bin\/vite\.js$/);
+});
+
+test("unix leaves a bare command unchanged", () => {
+  assert.equal(resolveCommand("vite", { platform: "linux", root: "/tmp/app", pathEnv: "" }), "vite");
+});
+
+test("win32 resolves node_modules/.bin vite.cmd", () => {
+  const root = mkdtempSync(join(tmpdir(), "app-env-bin-"));
+  const bin = join(root, "node_modules", ".bin");
+  mkdirSync(bin, { recursive: true });
+  const cmd = join(bin, "vite.cmd");
+  writeFileSync(cmd, "@echo off\r\n");
+  assert.equal(resolveCommand("vite", { platform: "win32", root, pathEnv: "" }), cmd);
+});
+
+test("win32 leaves absolute paths unchanged", () => {
+  const abs = join(tmpdir(), "node.exe");
+  assert.equal(resolveCommand(abs, { platform: "win32", root: tmpdir(), pathEnv: "" }), abs);
+});
+
+test("win32 searches PATH with PATHEXT when .bin is empty", () => {
+  const emptyRoot = mkdtempSync(join(tmpdir(), "app-env-empty-"));
+  const pathDir = mkdtempSync(join(tmpdir(), "app-env-path-"));
+  const exe = join(pathDir, "node.exe");
+  writeFileSync(exe, "");
+  assert.equal(
+    resolveCommand("node", {
+      platform: "win32",
+      root: emptyRoot,
+      pathEnv: pathDir,
+      pathext: ".EXE;.CMD",
+    }).toLowerCase(),
+    exe.toLowerCase(),
+  );
+});
+
 test("the CLI still runs when invoked through a symlinked path", async () => {
   // node realpaths import.meta.url but not process.argv[1], so a raw comparison
   // turns the wrapper into a no-op that exits 0 without starting anything.
   const link = join(mkdtempSync(join(tmpdir(), "app-env-link-")), "scripts");
-  symlinkSync(join(projectRoot(), "scripts"), link);
+  symlinkSync(
+    join(projectRoot(), "scripts"),
+    link,
+    process.platform === "win32" ? "junction" : undefined,
+  );
   const { stdout } = await execFileAsync(process.execPath, [
     join(link, "with-app-env.mjs"),
     process.execPath,

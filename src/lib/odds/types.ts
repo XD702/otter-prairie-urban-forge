@@ -46,6 +46,8 @@ export interface GameLine {
   venue: string | null;
   neutralSite: boolean;
   opener: boolean;
+  /** True when lines are live/in-game (not kickoff). From Go Birds dump. */
+  live?: boolean;
   moneyline: MoneylineMarket;
   spread: SpreadMarket;
   total: TotalMarket;

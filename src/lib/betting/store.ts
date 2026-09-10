@@ -14,7 +14,7 @@ import { round2, uid } from "@/lib/utils";
 export type MarketKind = "spread" | "moneyline" | "total";
 export type SelectionSide = "home" | "away" | "over" | "under";
 export type TicketStatus = "open" | "won" | "lost" | "push" | "void";
-export type BookTab = "board" | "tickets" | "fantasy" | "house";
+export type BookTab = "board" | "tickets" | "fantasy" | "chat" | "league" | "challenges" | "house";
 
 export interface BetLeg {
   id: string;
@@ -38,8 +38,9 @@ export interface Ticket {
   status: TicketStatus;
 }
 
-export const STARTING_BANKROLL = 10_000;
-export const STAKE_PRESETS = [25, 50, 100, 250, 500, 1000] as const;
+export const STARTING_BANKROLL = 100;
+export const STAKE_PRESETS = [5, 10, 25, 50, 100] as const;
+const DEFAULT_STAKE = 10;
 
 function isPricedOdds(odds: number | null | undefined): odds is number {
   return odds !== null && odds !== undefined && Number.isFinite(odds) && odds !== 0;
@@ -69,7 +70,7 @@ export const useBook = create<BookState>()(
     (set, get) => ({
       bankroll: STARTING_BANKROLL,
       slip: [],
-      stake: 100,
+      stake: DEFAULT_STAKE,
       tickets: [],
       tab: "board",
       slipOpen: false,
@@ -140,13 +141,30 @@ export const useBook = create<BookState>()(
         set({
           bankroll: STARTING_BANKROLL,
           slip: [],
-          stake: 100,
+          stake: DEFAULT_STAKE,
           tickets: [],
           notice: null,
         }),
     }),
     {
       name: "eastside-legends-sim",
+      version: 2,
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as {
+          bankroll?: number;
+          slip?: BetLeg[];
+          stake?: number;
+          tickets?: Ticket[];
+        };
+        if (version < 2) {
+          return {
+            ...state,
+            bankroll: STARTING_BANKROLL,
+            stake: Math.min(state.stake ?? DEFAULT_STAKE, STARTING_BANKROLL),
+          };
+        }
+        return state;
+      },
       partialize: (state) => ({
         bankroll: state.bankroll,
         slip: state.slip,

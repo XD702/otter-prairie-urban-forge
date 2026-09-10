@@ -20,9 +20,9 @@
  * `process.env`, which is why the merge has to happen before Vite starts.
  */
 import { spawn } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { constants as osConstants } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const APP_ENV_REL_PATH = ".grok/app-env.json";
@@ -88,6 +88,58 @@ export function projectRoot() {
 }
 
 /**
+ * Resolve a bare command for `spawn()`.
+ *
+ * Unix: return `command` unchanged — `npm run` already puts `node_modules/.bin`
+ * on PATH, and a bare `vite` is what the original wrapper spawned.
+ * Windows: `spawn()` cannot see `vite` / `vite.cmd` shims, so prefer
+ * `<root>/node_modules/.bin/<cmd>.cmd`, then PATH + PATHEXT.
+ */
+export function resolveCommand(command, options = {}) {
+  const platform = options.platform ?? process.platform;
+  const root = options.root ?? projectRoot();
+  const exists = options.exists ?? existsSync;
+  const pathEnv = options.pathEnv ?? process.env.PATH ?? "";
+  const pathext = options.pathext ?? process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD";
+
+  if (platform !== "win32") return command;
+  if (!command || isAbsolute(command) || command.includes("/") || command.includes("\\")) {
+    return command;
+  }
+
+  const binDir = join(root, "node_modules", ".bin");
+  for (const name of [`${command}.cmd`, `${command}.exe`, command]) {
+    const candidate = join(binDir, name);
+    if (exists(candidate)) return candidate;
+  }
+
+  const exts = String(pathext).split(";").filter(Boolean);
+  for (const dir of String(pathEnv).split(delimiter)) {
+    if (!dir) continue;
+    const direct = join(dir, command);
+    if (exists(direct)) return direct;
+    for (const ext of exts) {
+      const candidate = join(dir, command + ext);
+      if (exists(candidate)) return candidate;
+    }
+  }
+  return command;
+}
+
+/** JS entry from `node_modules/<command>/package.json` `bin`, if present. */
+export function resolvePackageBin(command, root = projectRoot()) {
+  try {
+    const pkg = JSON.parse(readFileSync(join(root, "node_modules", command, "package.json"), "utf8"));
+    const binRel = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.[command];
+    if (typeof binRel !== "string") return null;
+    const binJs = join(root, "node_modules", command, binRel);
+    return existsSync(binJs) ? binJs : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Whether `moduleUrl` is the script node was asked to run.
  *
  * Both sides are resolved through symlinks: node realpaths `import.meta.url`
@@ -111,7 +163,19 @@ function main(argv) {
     process.exit(2);
   }
   const env = mergeAppEnv(readAppEnv(projectRoot()), process.env);
-  const child = spawn(command, args, { stdio: "inherit", env });
+  const resolved = resolveCommand(command);
+  const winShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(resolved);
+  // npm's .cmd shim exits after launching node, so the wrapper would die.
+  // Prefer `node <package bin>` so `npm run dev` stays attached; else cmd.exe.
+  const packageBin = winShim ? resolvePackageBin(command) : null;
+  const child = packageBin
+    ? spawn(process.execPath, [packageBin, ...args], { stdio: "inherit", env })
+    : winShim
+      ? spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", resolved, ...args], {
+          stdio: "inherit",
+          env,
+        })
+      : spawn(resolved, args, { stdio: "inherit", env });
   // The dev server is long-running and is stopped by signalling this wrapper.
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
     process.on(signal, () => child.kill(signal));

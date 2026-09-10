@@ -1,0 +1,12 @@
+{
+  "leagueId": "288732",
+  "leagueKey": "f1.l.288732",
+  "pulledAt": null,
+  "source": "yahoo",
+  "settings": {},
+  "teams": [],
+  "matchups": [],
+  "standings": [],
+  "_stub": true,
+  "_note": "Missing-safe stub — Go Birds owns live pull. Empty teams/matchups; scores absent. Do not invent points or PPR."
+}
