@@ -24,7 +24,7 @@ export function BetSlip({ scores }: { scores: ScoreBoard }) {
   const payout = win !== null ? win + stake : null;
 
   return (
-    <aside className="rounded-[var(--radius-xl)] border border-gold/30 bg-felt-deep p-4 shadow-[inset_0_1px_0_rgba(227,197,106,0.12)]">
+    <aside className="surface-felt rounded-[var(--radius-xl)] border line-gold p-4">
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Window</p>

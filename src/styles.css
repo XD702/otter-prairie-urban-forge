@@ -1,31 +1,38 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @theme {
-  --font-display: "Cinzel", "Times New Roman", serif;
-  --font-sans: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Oswald", "Arial Narrow", "Segoe UI", sans-serif;
+  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
 
-  --color-felt: #0b2e24;
-  --color-felt-deep: #071c16;
-  --color-felt-raise: #12382c;
-  --color-gold: #c9a227;
-  --color-gold-bright: #e3c56a;
-  --color-cream: #f3ead3;
-  --color-ink: #071612;
-  --color-muted: #b7c4bc;
+  --color-void: #070A08;
+  --color-felt: #0E3B28;
+  --color-felt-deep: #0A2A1C;
+  --color-felt-raise: #124F35;
+  --color-ink: #0A0C0B;
+  --color-cream: #F3EDE3;
+  --color-muted: #9A958C;
+  --color-gold: #D4AF57;
+  --color-gold-bright: #F0C75E;
+  --color-neon-magenta: #FF2D95;
+  --color-neon-cyan: #2EF2C4;
   --color-chip-red: #8b2a2a;
   --color-chip-black: #14110e;
-  --color-win: #7dcea0;
-  --color-loss: #e07a7a;
+  --color-win: #2EF2C4;
+  --color-loss: #E23D4A;
 
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 28px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --motion-quick: 150ms;
   --motion-fast: 250ms;
+
+  --shadow-glow-magenta: 0 0 20px rgba(255, 45, 149, 0.35);
+  --shadow-glow-cyan: 0 0 16px rgba(46, 242, 196, 0.3);
 }
 
 @layer base {
@@ -37,7 +44,7 @@
   body {
     margin: 0;
     min-height: 100dvh;
-    background: var(--color-felt);
+    background: var(--color-void);
     color: var(--color-cream);
     font-family: var(--font-sans);
   }
@@ -46,6 +53,8 @@
   h2,
   h3 {
     text-wrap: balance;
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
   }
 
   p {
@@ -56,20 +65,41 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+
+  .tabular-money {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
+/* App shell: night void — felt is NOT wallpaper */
 .felt-bg {
+  background-color: var(--color-void);
+  background-image:
+    radial-gradient(ellipse at 50% -10%, rgba(212, 175, 87, 0.05), transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(255, 45, 149, 0.04), transparent 40%);
+}
+
+/* Felt only on betting surfaces */
+.surface-felt {
   background-color: var(--color-felt);
   background-image:
-    radial-gradient(circle at 12% 0%, rgba(201, 162, 39, 0.07), transparent 42%),
-    radial-gradient(circle at 88% 100%, rgba(7, 28, 22, 0.85), transparent 46%),
+    radial-gradient(circle at 20% 0%, rgba(212, 175, 87, 0.08), transparent 45%),
     repeating-radial-gradient(
       circle at 0 0,
-      rgba(0, 0, 0, 0.08) 0,
-      rgba(0, 0, 0, 0.08) 1px,
+      rgba(0, 0, 0, 0.06) 0,
+      rgba(0, 0, 0, 0.06) 1px,
       transparent 1px,
       transparent 3px
     );
+}
+
+.surface-ink {
+  background-color: var(--color-ink);
+  border: 1px solid rgba(212, 175, 87, 0.22);
+}
+
+.line-gold {
+  border-color: rgba(212, 175, 87, 0.22);
 }
 
 @keyframes ticker {
@@ -81,8 +111,41 @@
   }
 }
 
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.live-pulse {
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+.live-edge {
+  box-shadow: inset 3px 0 0 0 var(--color-neon-magenta);
+}
+
+.glow-magenta {
+  box-shadow: var(--shadow-glow-magenta);
+}
+
+.glow-cyan {
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+.win-flash {
+  animation: live-pulse 0.9s ease-out 1;
+  box-shadow: var(--shadow-glow-cyan);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ticker-track {
+  .ticker-track,
+  .live-pulse,
+  .win-flash {
     animation: none !important;
   }
 }

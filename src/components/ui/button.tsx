@@ -7,17 +7,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        gold: "bg-gold text-ink shadow-[0_1px_0_rgba(255,255,255,0.25)_inset] hover:bg-gold-bright",
+        gold: "rounded-[var(--radius-pill)] bg-gold text-ink shadow-[0_1px_0_rgba(255,255,255,0.22)_inset] hover:bg-gold-bright",
         ghost:
-          "bg-transparent text-cream border border-gold/30 hover:border-gold/60 hover:bg-felt-raise",
-        felt: "bg-felt-raise text-cream border border-gold/20 hover:border-gold/45",
-        danger: "bg-transparent text-loss border border-loss/40 hover:bg-loss/10",
+          "rounded-[var(--radius-pill)] bg-transparent text-cream border border-gold/30 hover:border-gold/60 hover:bg-cream/5",
+        felt: "rounded-[var(--radius-md)] bg-felt text-cream border border-gold/22 hover:border-gold/45 hover:bg-felt-raise",
+        danger: "rounded-[var(--radius-pill)] bg-transparent text-loss border border-loss/40 hover:bg-loss/10",
       },
       size: {
-        sm: "h-9 px-3 text-sm rounded-[var(--radius-sm)]",
-        md: "h-11 px-4 text-sm rounded-[var(--radius-md)]",
-        lg: "h-12 px-5 text-base rounded-[var(--radius-md)]",
-        icon: "size-11 rounded-[var(--radius-md)]",
+        sm: "h-9 px-3 text-sm",
+        md: "h-11 px-4 text-sm",
+        lg: "h-12 px-5 text-base",
+        icon: "size-11",
       },
     },
     defaultVariants: {

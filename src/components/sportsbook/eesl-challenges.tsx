@@ -365,7 +365,7 @@ function ChallengeList({
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         className="h-8 px-2 text-xs"
                         disabled={busy}
                         onClick={() => onDecline?.(c.id)}
@@ -377,7 +377,7 @@ function ChallengeList({
                   {c.status === "open" && iAmChallenger ? (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       className="h-8 px-2 text-xs"
                       disabled={busy}
                       onClick={() => onCancel?.(c.id)}
@@ -407,7 +407,7 @@ function ChallengeList({
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         className="h-8 px-2 text-xs"
                         disabled={busy}
                         onClick={() => onSettle?.(c.id, "push")}

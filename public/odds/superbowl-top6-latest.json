@@ -1,0 +1,41 @@
+{
+  "pulledAt": "2026-09-10T02:48:42.489763+00:00",
+  "market": "Super Bowl Winner",
+  "book": "DraftKings",
+  "sourceUrl": "https://sportsbook.draftkings.com/leagues/football/nfl?category=futures&subcategory=super-bowl&nav_1=winner",
+  "rawPath": "/workspace/eastside/.firecrawl/sb-winner-dk.md",
+  "scrapedVia": "Firecrawl",
+  "note": "Top 6 by shortest odds on DK board order. Bills and Ravens tied at +1000.",
+  "teams": [
+    {
+      "rank": 1,
+      "team": "Los Angeles Rams",
+      "odds": "+500"
+    },
+    {
+      "rank": 2,
+      "team": "Buffalo Bills",
+      "odds": "+1000"
+    },
+    {
+      "rank": 3,
+      "team": "Baltimore Ravens",
+      "odds": "+1000"
+    },
+    {
+      "rank": 4,
+      "team": "Seattle Seahawks",
+      "odds": "+1300"
+    },
+    {
+      "rank": 5,
+      "team": "Kansas City Chiefs",
+      "odds": "+1600"
+    },
+    {
+      "rank": 6,
+      "team": "New England Patriots",
+      "odds": "+1650"
+    }
+  ]
+}

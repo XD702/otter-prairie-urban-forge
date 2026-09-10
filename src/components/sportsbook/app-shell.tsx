@@ -7,6 +7,8 @@ import { FantasyBoard } from "@/components/sportsbook/fantasy-board";
 import { LeagueOffice } from "@/components/sportsbook/league-office";
 import { HouseRules } from "@/components/sportsbook/house-rules";
 import { EeslChallenges } from "@/components/sportsbook/eesl-challenges";
+import { MarketsBoard } from "@/components/sportsbook/markets-board";
+import { ArcadeHub } from "@/components/sportsbook/arcade-hub";
 import { LeagueChat } from "@/components/sportsbook/league-chat";
 import { MyBets } from "@/components/sportsbook/my-bets";
 import { Ticker } from "@/components/sportsbook/ticker";
@@ -14,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { STARTING_BANKROLL, useBook, type BookTab } from "@/lib/betting/store";
 import { useBookFeeds } from "@/lib/feeds/use-feeds";
 import type { ScoreBoard } from "@/lib/scores";
-import { ClipboardList, Coins, LayoutGrid, MessageCircle, ScrollText, Trophy, Users, X } from "lucide-react";
+import { ClipboardList, Coins, Gamepad2, Landmark, LayoutGrid, MessageCircle, ScrollText, Trophy, Users, X } from "lucide-react";
 
 const TABS: { id: BookTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "board", label: "Board", icon: LayoutGrid },
@@ -23,6 +25,8 @@ const TABS: { id: BookTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "league", label: "League", icon: Trophy },
   { id: "challenges", label: "E$L", icon: Coins },
+  { id: "markets", label: "Markets", icon: Landmark },
+  { id: "arcade", label: "Arcade", icon: Gamepad2 },
   { id: "house", label: "House", icon: ScrollText },
 ];
 
@@ -52,14 +56,14 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
 
   return (
     <div className="felt-bg min-h-dvh text-cream">
-      <header className="border-b border-gold/20 bg-felt-deep/90">
+      <header className="border-b line-gold bg-void/95">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="font-display text-[11px] uppercase tracking-[0.32em] text-gold">
-              Las Vegas · Sim book
+              Eastside After Dark · <span className="text-gold-bright">SIM</span>
             </p>
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
-              Eastside Legends Sim
+            <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-cream sm:text-4xl">
+              Eastside Legends <span className="text-gold">Sim</span>
             </h1>
             <p className="mt-1 text-sm text-muted">
               Prototype NFL betting and fantasy tracker. Simulation only. No real money.
@@ -71,12 +75,12 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
             <a
               href="/eastside-legends-sim-source.zip"
               download="eastside-legends-sim-source.zip"
-              className="inline-flex min-h-11 items-center rounded-full border border-gold/40 px-4 text-sm text-gold hover:border-gold hover:bg-gold/10"
+              className="inline-flex min-h-11 items-center rounded-[var(--radius-pill)] border border-gold/30 px-4 text-sm text-cream hover:border-gold/60 hover:bg-cream/5"
             >
               Source zip
             </a>
             <Button
-              variant="felt"
+              variant="gold"
               className="lg:hidden"
               onClick={() => setSlipOpen(true)}
             >
@@ -84,7 +88,7 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
             </Button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-[1400px] gap-1 overflow-x-auto px-4 pb-3 sm:px-6">
+        <nav className="mx-auto flex max-w-[1400px] gap-1 overflow-x-auto bg-void px-4 pb-3 sm:px-6">
           {TABS.map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
@@ -93,13 +97,13 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
                 key={item.id}
                 type="button"
                 onClick={() => setTab(item.id)}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm ${
+                className={`inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] border px-4 text-sm ${
                   active
                     ? "border-gold bg-gold text-ink"
-                    : "border-gold/20 text-cream hover:border-gold/50"
+                    : "border-transparent text-muted hover:border-gold/30 hover:text-cream"
                 }`}
               >
-                <Icon className="size-4" />
+                <Icon className={`size-4 ${active ? "text-ink" : "text-muted"}`} />
                 {item.label}
               </button>
             );
@@ -123,6 +127,8 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
           {tab === "chat" ? <LeagueChat /> : null}
           {tab === "league" ? <LeagueOffice /> : null}
           {tab === "challenges" ? <EeslChallenges /> : null}
+          {tab === "markets" ? <MarketsBoard /> : null}
+          {tab === "arcade" ? <ArcadeHub /> : null}
           {tab === "house" ? <HouseRules /> : null}
         </main>
 
@@ -143,7 +149,7 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[var(--radius-xl)] p-3">
             <div className="mb-2 flex justify-end">
-              <Button variant="felt" size="icon" onClick={() => setSlipOpen(false)} aria-label="Close">
+              <Button variant="ghost" size="icon" onClick={() => setSlipOpen(false)} aria-label="Close">
                 <X className="size-4" />
               </Button>
             </div>

@@ -62,7 +62,12 @@ export function GameCard({ game, score }: { game: GameLine; score?: GameScore })
   const live = score?.inProgress;
 
   return (
-    <article className="rounded-[var(--radius-lg)] border border-gold/25 bg-felt-raise p-3 shadow-[inset_0_1px_0_rgba(227,197,106,0.12)] sm:p-4">
+    <article
+      className={cn(
+        "surface-felt rounded-[var(--radius-lg)] border line-gold p-3 sm:p-4",
+        live && "live-edge",
+      )}
+    >
       <header className="mb-3 flex items-start justify-between gap-3">
         <div>
           <p className="font-display text-lg leading-tight text-cream">
@@ -79,7 +84,11 @@ export function GameCard({ game, score }: { game: GameLine; score?: GameScore })
           {game.opener ? <Badge tone="gold">Opener</Badge> : null}
           {game.book ? <Badge tone="gold">{game.book}</Badge> : <Badge tone="unavailable">Book unavailable</Badge>}
           {game.venue ? <Badge tone="snapshot">{game.venue}</Badge> : null}
-          {live ? <Badge tone="pending">Live</Badge> : null}
+          {live ? (
+            <span className="live-pulse glow-magenta inline-flex items-center rounded-[var(--radius-pill)] border border-neon-magenta/50 bg-neon-magenta/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neon-magenta">
+              LIVE
+            </span>
+          ) : null}
           {score?.phase === "final" ? <Badge tone="final">Final</Badge> : null}
           <span className="text-[11px] text-muted tabular-nums">{kickoff}</span>
         </div>

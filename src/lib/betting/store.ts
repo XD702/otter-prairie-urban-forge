@@ -14,7 +14,7 @@ import { round2, uid } from "@/lib/utils";
 export type MarketKind = "spread" | "moneyline" | "total";
 export type SelectionSide = "home" | "away" | "over" | "under";
 export type TicketStatus = "open" | "won" | "lost" | "push" | "void";
-export type BookTab = "board" | "tickets" | "fantasy" | "chat" | "league" | "challenges" | "house";
+export type BookTab = "board" | "tickets" | "fantasy" | "chat" | "league" | "challenges" | "markets" | "arcade" | "house";
 
 export interface BetLeg {
   id: string;
