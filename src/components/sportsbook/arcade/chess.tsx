@@ -9,6 +9,13 @@ import { canStake, creditWin, spendStake } from "@/lib/arcade/bankroll";
 import { appendArcadeResult } from "@/lib/arcade/history";
 import { ARCADE_SIM_DISCLAIMER, arcadeUid, parseStake } from "@/lib/arcade/types";
 import { ArcadeStakeBar } from "./stake-bar";
+import {
+  ARCADE_HOWTO_COPY,
+  ArcadeHowTo,
+  ArcadeHowToExpandable,
+  useArcadeHowToGate,
+} from "./arcade-how-to";
+
 import { ArcadeH2HPanel } from "./h2h-panel";
 
 type Color = "w" | "b";
@@ -143,6 +150,8 @@ function kingAlive(board: Board, side: Color): boolean {
 }
 
 export function ChessGame({ onClose }: { onClose: () => void }) {
+  const { ready: howtoReady, markReady } = useArcadeHowToGate("chess");
+  const HOW = ARCADE_HOWTO_COPY["chess"];
   const bankroll = useBook((s) => s.bankroll);
   const [mode, setMode] = useState<"cpu" | "local" | "h2h">("cpu");
   const [board, setBoard] = useState<Board>(() => [...START]);
@@ -253,6 +262,21 @@ export function ChessGame({ onClose }: { onClose: () => void }) {
     else setSel(null);
   }
 
+  if (!howtoReady) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Arcade</p>
+            <h3 className="font-display text-2xl font-semibold text-cream">Chess</h3>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
+        </div>
+        <ArcadeHowTo {...HOW} gameId="chess" onPlay={markReady} />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -262,6 +286,7 @@ export function ChessGame({ onClose }: { onClose: () => void }) {
         </div>
         <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
       </div>
+      <ArcadeHowToExpandable {...HOW} gameId="chess" />
       <p className="text-sm text-muted">
         Thin rules (no castling/en passant/check filter). Local 2P or random-legal CPU. {ARCADE_SIM_DISCLAIMER}
       </p>

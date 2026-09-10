@@ -16,6 +16,13 @@ import {
 import { peekOddsBoard, type GameLine, type OddsBoard } from "@/lib/odds";
 import { peekScoreBoard, type GameScore, type ScoreBoard } from "@/lib/scores";
 import { ArcadeStakeBar } from "./stake-bar";
+import {
+  ARCADE_HOWTO_COPY,
+  ArcadeHowTo,
+  ArcadeHowToExpandable,
+  useArcadeHowToGate,
+} from "./arcade-how-to";
+
 
 type PickSide = "away" | "home";
 
@@ -64,6 +71,8 @@ export function PickemGame({
   scores?: ScoreBoard;
   onClose: () => void;
 }) {
+  const { ready: howtoReady, markReady } = useArcadeHowToGate("pickem");
+  const HOW = ARCADE_HOWTO_COPY["pickem"];
   const odds = oddsProp ?? peekOddsBoard();
   const scores = scoresProp ?? peekScoreBoard();
   const bankroll = useBook((s) => s.bankroll);
@@ -127,10 +136,26 @@ export function PickemGame({
     setPicks({});
   }
 
+  if (!howtoReady) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Arcade</p>
+            <h3 className="font-display text-2xl font-semibold text-cream">NFL Quick Pick'em</h3>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
+        </div>
+        <ArcadeHowTo {...HOW} gameId="pickem" onPlay={markReady} />
+      </section>
+    );
+  }
+
   if (games.length === 0) {
     return (
       <section className="space-y-4">
         <Header title="NFL Quick Pick'em" onClose={onClose} />
+        <ArcadeHowToExpandable {...HOW} gameId="pickem" />
         <Empty
           title="No odds board games"
           detail={
@@ -146,6 +171,7 @@ export function PickemGame({
   return (
     <section className="space-y-4">
       <Header title="NFL Quick Pick'em" onClose={onClose} />
+      <ArcadeHowToExpandable {...HOW} gameId="pickem" />
       <p className="text-sm text-muted">
         Pick away or home. Stake spent on lock (per pick). Graded from scores when final;
         otherwise pending. Even money on win; push refunds. {ARCADE_SIM_DISCLAIMER}

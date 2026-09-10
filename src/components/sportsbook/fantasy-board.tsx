@@ -45,7 +45,7 @@ function SlotRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-2 rounded-[var(--radius-sm)] border border-gold/15 bg-ink/30 px-3",
+        "flex items-center gap-2 rounded-[var(--radius-sm)] border line-gold px-3 text-cream odd:bg-ink/35 even:bg-cream/[0.04]",
         compact ? "min-h-11 py-1.5" : "min-h-12 py-2",
       )}
     >
@@ -234,7 +234,7 @@ export function FantasyBoard({
 
       {showPicker ? (
         <div className="mb-4 space-y-3">
-          <div className="rounded-[var(--radius-xl)] border border-gold/25 bg-felt-deep p-3">
+          <div className="surface-ink rounded-[var(--radius-xl)] p-3">
             <p className="mb-2 text-[10px] uppercase tracking-[0.22em] text-gold/80">Week 1 matchups</p>
             <ul className="space-y-1.5">
               {matchups.map((m) => {
@@ -243,7 +243,7 @@ export function FantasyBoard({
                 return (
                   <li
                     key={m.id}
-                    className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--radius-sm)] border border-gold/10 bg-ink/25 px-2.5 py-1.5 text-sm text-cream"
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--radius-sm)] border line-gold bg-ink/40 px-2.5 py-1.5 text-sm text-cream odd:bg-ink/30 even:bg-cream/[0.04]"
                   >
                     <button
                       type="button"
@@ -297,7 +297,7 @@ export function FantasyBoard({
         </div>
       ) : null}
 
-      <div className="rounded-[var(--radius-xl)] border border-gold/25 bg-felt-deep p-4">
+      <div className="surface-ink rounded-[var(--radius-xl)] p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="font-display text-sm uppercase tracking-[0.14em] text-gold">{roster.league}</p>

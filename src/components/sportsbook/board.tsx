@@ -1,4 +1,4 @@
-import { GameCard } from "@/components/sportsbook/game-card";
+﻿import { GameCard } from "@/components/sportsbook/game-card";
 import { UnavailablePlaque } from "@/components/sportsbook/unavailable-plaque";
 import { Badge } from "@/components/ui/badge";
 import type { OddsBoard } from "@/lib/odds";
@@ -8,25 +8,24 @@ export function Board({ odds, scores }: { odds: OddsBoard; scores: ScoreBoard })
   const weekLabel = odds.week ? `Week ${odds.week}` : "Week unavailable";
   const byId = new Map(scores.games.map((game) => [game.gameId, game]));
 
+  const sortedGames = [...odds.games].sort((a, b) => {
+    const aLive = byId.get(a.id)?.inProgress ? 0 : 1;
+    const bLive = byId.get(b.id)?.inProgress ? 0 : 1;
+    if (aLive !== bLive) return aLive - bLive;
+    const aPending = byId.get(a.id)?.phase === "pending" || !byId.get(a.id) ? 0 : 1;
+    const bPending = byId.get(b.id)?.phase === "pending" || !byId.get(b.id) ? 0 : 1;
+    return aPending - bPending;
+  });
+
   return (
     <section>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">The card</p>
-          <h2 className="font-display text-3xl font-semibold tracking-tight text-cream">NFL board</h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={odds.week ? "gold" : "unavailable"}>{weekLabel}</Badge>
-          <Badge tone="gold">Spreads only</Badge>
-          <Badge tone="snapshot">Simulation</Badge>
-        </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Badge tone={odds.week ? "gold" : "unavailable"}>{weekLabel}</Badge>
+        <Badge tone="gold">Spreads</Badge>
+        <Badge tone="snapshot">Sim</Badge>
       </div>
-      <p className="mb-2 text-sm leading-relaxed text-cream text-pretty">
+      <p className="mb-4 text-xs text-muted truncate">
         {odds.sourceLabel ?? "Source unavailable"}
-      </p>
-      <p className="mb-5 text-sm text-muted">
-        Dated snapshot, not a live scrape. One book: BetMGM. Moneyline, total, and juice are
-        unavailable — not invented. No real money.
       </p>
 
       {odds.status !== "ready" || odds.games.length === 0 ? (
@@ -40,7 +39,7 @@ export function Board({ odds, scores }: { odds: OddsBoard; scores: ScoreBoard })
         />
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
-          {odds.games.map((game) => (
+          {sortedGames.map((game) => (
             <GameCard key={game.id} game={game} score={byId.get(game.id)} />
           ))}
         </div>

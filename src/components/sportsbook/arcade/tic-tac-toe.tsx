@@ -8,6 +8,13 @@ import { canStake, creditWin, spendStake } from "@/lib/arcade/bankroll";
 import { appendArcadeResult } from "@/lib/arcade/history";
 import { ARCADE_SIM_DISCLAIMER, arcadeUid, parseStake } from "@/lib/arcade/types";
 import { ArcadeStakeBar } from "./stake-bar";
+import {
+  ARCADE_HOWTO_COPY,
+  ArcadeHowTo,
+  ArcadeHowToExpandable,
+  useArcadeHowToGate,
+} from "./arcade-how-to";
+
 import { ArcadeH2HPanel } from "./h2h-panel";
 
 type Cell = "X" | "O" | null;
@@ -42,6 +49,8 @@ function cpuMove(b: Cell[]): number {
 }
 
 export function TicTacToeGame({ onClose }: { onClose: () => void }) {
+  const { ready: howtoReady, markReady } = useArcadeHowToGate("tic-tac-toe");
+  const HOW = ARCADE_HOWTO_COPY["tic-tac-toe"];
   const bankroll = useBook((s) => s.bankroll);
   const [mode, setMode] = useState<Mode>("cpu");
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
@@ -131,9 +140,25 @@ export function TicTacToeGame({ onClose }: { onClose: () => void }) {
     setTurn(turn === "X" ? "O" : "X");
   }
 
+  if (!howtoReady) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Arcade</p>
+            <h3 className="font-display text-2xl font-semibold text-cream">Tic-Tac-Toe</h3>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
+        </div>
+        <ArcadeHowTo {...HOW} gameId="tic-tac-toe" onPlay={markReady} />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <Hdr title="Tic-Tac-Toe" onClose={onClose} />
+      <ArcadeHowToExpandable {...HOW} gameId="tic-tac-toe" />
       <p className="text-sm text-muted">
         Vs CPU (you = X), local 2P, or H2H E$L ledger. {ARCADE_SIM_DISCLAIMER}
       </p>

@@ -15,6 +15,13 @@ import {
 } from "@/lib/arcade/types";
 import { getWeek1Matchups, MATCHUPS, TEAMS } from "@/lib/fantasy";
 import { ArcadeStakeBar } from "./stake-bar";
+import {
+  ARCADE_HOWTO_COPY,
+  ArcadeHowTo,
+  ArcadeHowToExpandable,
+  useArcadeHowToGate,
+} from "./arcade-how-to";
+
 import { ArcadeH2HPanel } from "./h2h-panel";
 
 type Side = "a" | "b";
@@ -26,6 +33,8 @@ function randomMatchup() {
 }
 
 export function MatchupDodgeGame({ onClose }: { onClose: () => void }) {
+  const { ready: howtoReady, markReady } = useArcadeHowToGate("matchup-dodge");
+  const HOW = ARCADE_HOWTO_COPY["matchup-dodge"];
   const bankroll = useBook((s) => s.bankroll);
   const [mode, setMode] = useState<"solo" | "h2h">("solo");
   const [matchup, setMatchup] = useState(() => randomMatchup());
@@ -101,9 +110,25 @@ export function MatchupDodgeGame({ onClose }: { onClose: () => void }) {
     ? `${matchup.id} · ${matchup.a.teamName} vs ${matchup.b.teamName} · pick:${pickTeam.id} (${pickTeam.teamName})`
     : `${matchup.id} · pick pending`;
 
+  if (!howtoReady) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Arcade</p>
+            <h3 className="font-display text-2xl font-semibold text-cream">Matchup Dodge</h3>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
+        </div>
+        <ArcadeHowTo {...HOW} gameId="matchup-dodge" onPlay={markReady} />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <Hdr title="Matchup Dodge" onClose={onClose} />
+      <ArcadeHowToExpandable {...HOW} gameId="matchup-dodge" />
       <p className="text-sm text-muted">
         Random Week 1 fantasy matchup. Solo stake vs house stays pending without real
         scores. H2H uses the E$L challenges ledger (pot 2× on accept).{" "}

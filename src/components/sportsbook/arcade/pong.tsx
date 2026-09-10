@@ -8,6 +8,13 @@ import { canStake, creditWin, spendStake } from "@/lib/arcade/bankroll";
 import { appendArcadeResult } from "@/lib/arcade/history";
 import { ARCADE_SIM_DISCLAIMER, arcadeUid, parseStake } from "@/lib/arcade/types";
 import { ArcadeStakeBar } from "./stake-bar";
+import {
+  ARCADE_HOWTO_COPY,
+  ArcadeHowTo,
+  ArcadeHowToExpandable,
+  useArcadeHowToGate,
+} from "./arcade-how-to";
+
 import { ArcadeH2HPanel } from "./h2h-panel";
 
 const W = 480;
@@ -18,6 +25,8 @@ const BALL = 8;
 const WIN = 5;
 
 export function PongGame({ onClose }: { onClose: () => void }) {
+  const { ready: howtoReady, markReady } = useArcadeHowToGate("pong");
+  const HOW = ARCADE_HOWTO_COPY["pong"];
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bankroll = useBook((s) => s.bankroll);
   const [mode, setMode] = useState<"cpu" | "h2h">("cpu");
@@ -176,6 +185,21 @@ export function PongGame({ onClose }: { onClose: () => void }) {
     setRunning(true);
   }
 
+  if (!howtoReady) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Arcade</p>
+            <h3 className="font-display text-2xl font-semibold text-cream">Pong</h3>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
+        </div>
+        <ArcadeHowTo {...HOW} gameId="pong" onPlay={markReady} />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -185,6 +209,7 @@ export function PongGame({ onClose }: { onClose: () => void }) {
         </div>
         <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
       </div>
+      <ArcadeHowToExpandable {...HOW} gameId="pong" />
       <p className="text-sm text-muted">
         First to {WIN}. Arrow keys / W S. Vs CPU with optional stake, or H2H E$L side-bet. {ARCADE_SIM_DISCLAIMER}
       </p>
@@ -197,7 +222,19 @@ export function PongGame({ onClose }: { onClose: () => void }) {
       ) : (
         <ArcadeH2HPanel gameId="pong" termsExtra={`first to ${WIN} · canvas play / settle after`} defaultStake="5" />
       )}
-      <canvas ref={canvasRef} width={W} height={H} className="w-full max-w-lg rounded-[var(--radius-md)] border border-gold/30" />
+      <canvas
+        ref={canvasRef}
+        width={W}
+        height={H}
+        className="w-full max-w-lg touch-none rounded-[var(--radius-md)] border border-gold/30"
+        onPointerMove={(e) => {
+          const c = canvasRef.current;
+          if (!c) return;
+          const rect = c.getBoundingClientRect();
+          const y = ((e.clientY - rect.top) / rect.height) * H;
+          state.current.py = Math.max(0, Math.min(H - PADDLE_H, y - PADDLE_H / 2));
+        }}
+      />
       <p className="text-sm text-cream tabular-nums">Score {score.p} – {score.c}</p>
       {!running ? (
         <button type="button" onClick={start} className="min-h-11 rounded-full border border-gold bg-gold px-5 text-sm text-ink">

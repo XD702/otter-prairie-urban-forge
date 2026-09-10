@@ -8,12 +8,21 @@ import { canStake, creditWin, spendStake } from "@/lib/arcade/bankroll";
 import { appendArcadeResult } from "@/lib/arcade/history";
 import { ARCADE_SIM_DISCLAIMER, arcadeUid, parseStake } from "@/lib/arcade/types";
 import { ArcadeStakeBar } from "./stake-bar";
+import {
+  ARCADE_HOWTO_COPY,
+  ArcadeHowTo,
+  ArcadeHowToExpandable,
+  useArcadeHowToGate,
+} from "./arcade-how-to";
+
 import { ArcadeH2HPanel } from "./h2h-panel";
 
 type Face = "heads" | "tails";
 
 export function CoinTossGame({ onClose }: { onClose: () => void }) {
   const bankroll = useBook((s) => s.bankroll);
+  const { ready: howtoReady, markReady } = useArcadeHowToGate("coin-toss");
+  const HOW = ARCADE_HOWTO_COPY["coin-toss"];
   const [mode, setMode] = useState<"house" | "h2h">("house");
   const [call, setCall] = useState<Face>("heads");
   const [stakeStr, setStakeStr] = useState("0");
@@ -95,6 +104,21 @@ export function CoinTossGame({ onClose }: { onClose: () => void }) {
     }, 700 + power * 8);
   }
 
+  if (!howtoReady) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Arcade</p>
+            <h3 className="font-display text-2xl font-semibold text-cream">Coin Toss Flick</h3>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
+        </div>
+        <ArcadeHowTo {...HOW} gameId="coin-toss" onPlay={markReady} />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -104,6 +128,7 @@ export function CoinTossGame({ onClose }: { onClose: () => void }) {
         </div>
         <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
       </div>
+      <ArcadeHowToExpandable {...HOW} gameId="coin-toss" />
       <p className="text-sm text-muted">
         Hold to charge, release to flick. Vs house (0–5) or friend H2H (1–5 E$L). {ARCADE_SIM_DISCLAIMER}
       </p>

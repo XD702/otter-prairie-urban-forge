@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Copy, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LEAGUE_CHAT_CAP } from "@/lib/supabase/league-chat";
 import {
-  INVITE_CODE,
   buildInviteUrl,
   inviteEmailRedirectTo,
 } from "@/lib/supabase/invite";
@@ -32,9 +31,7 @@ export function InvitePanel({
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [inviteUrl, setInviteUrl] = useState(
-    () => `http://localhost:8080/join?code=${INVITE_CODE}`,
-  );
+  const [inviteUrl, setInviteUrl] = useState("");
 
   useEffect(() => {
     setInviteUrl(buildInviteUrl());
@@ -46,7 +43,7 @@ export function InvitePanel({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      setStatus("Copy failed — select the link manually.");
+      setStatus("Copy failed â€” select the link manually.");
     }
   }
 
@@ -65,7 +62,7 @@ export function InvitePanel({
     setStatus(
       error
         ? error.message
-        : `Magic link sent to ${trimmed}. They’ll land on Join.`,
+        : `Magic link sent to ${trimmed}. Theyâ€™ll land on Join.`,
     );
     if (!error) setEmail("");
   }
@@ -109,7 +106,7 @@ export function InvitePanel({
           <Input
             type="email"
             autoComplete="email"
-            placeholder="Friend’s real email (optional)"
+            placeholder="Friendâ€™s real email (optional)"
             value={email}
             onChange={(ev) => setEmail(ev.target.value)}
             className="h-8 flex-1 text-xs"
@@ -120,7 +117,7 @@ export function InvitePanel({
             className="h-8 text-xs"
             disabled={busy || !email.trim()}
           >
-            {busy ? "Sending…" : "Send magic link"}
+            {busy ? "Sendingâ€¦" : "Send magic link"}
           </Button>
         </form>
       ) : null}
@@ -129,3 +126,4 @@ export function InvitePanel({
     </div>
   );
 }
+

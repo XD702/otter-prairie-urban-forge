@@ -16,6 +16,13 @@ import {
 import { peekOddsBoard, type OddsBoard } from "@/lib/odds";
 import { loadRoster, type FantasyRoster } from "@/lib/fantasy";
 import { ArcadeStakeBar } from "./stake-bar";
+import {
+  ARCADE_HOWTO_COPY,
+  ArcadeHowTo,
+  ArcadeHowToExpandable,
+  useArcadeHowToGate,
+} from "./arcade-how-to";
+
 
 type Card = {
   id: string;
@@ -77,6 +84,8 @@ export function HigherLowerGame({
   roster?: FantasyRoster;
   onClose: () => void;
 }) {
+  const { ready: howtoReady, markReady } = useArcadeHowToGate("higher-lower");
+  const HOW = ARCADE_HOWTO_COPY["higher-lower"];
   const odds = oddsProp ?? peekOddsBoard();
   const roster = rosterProp ?? loadRoster();
   const bankroll = useBook((s) => s.bankroll);
@@ -201,10 +210,26 @@ export function HigherLowerGame({
     );
   }
 
+  if (!howtoReady) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Arcade</p>
+            <h3 className="font-display text-2xl font-semibold text-cream">Higher / Lower</h3>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream">Back</button>
+        </div>
+        <ArcadeHowTo {...HOW} gameId="higher-lower" onPlay={markReady} />
+      </section>
+    );
+  }
+
   if (pool.length < 2 && !started) {
     return (
       <section className="space-y-4">
         <Header title="Higher / Lower" onClose={onClose} />
+        <ArcadeHowToExpandable {...HOW} gameId="higher-lower" />
         <div className="rounded-[var(--radius-lg)] border border-gold/20 bg-ink/40 p-5">
           <p className="font-display text-lg text-cream">Skip — no usable cards</p>
           <p className="mt-2 text-sm text-muted">
@@ -220,6 +245,7 @@ export function HigherLowerGame({
   return (
     <section className="space-y-4">
       <Header title="Higher / Lower" onClose={onClose} />
+      <ArcadeHowToExpandable {...HOW} gameId="higher-lower" />
       <p className="text-sm text-muted">
         3 rounds. Compare card B to card A (higher or lower). Values from spread abs
         or projectedPts only. Win session with 2+ correct (even money).{" "}

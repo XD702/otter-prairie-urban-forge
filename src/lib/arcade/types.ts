@@ -11,7 +11,7 @@ export const ARCADE_CURRENCY = "E$L coin$";
 export const ARCADE_SIM_DISCLAIMER = "Simulation only — not real money.";
 export const ARCADE_HISTORY_KEY = "eastside-arcade-v1";
 
-/** Sports mini-games + Arcade classics. */
+/** Sports mini-games + Arcade classics + New cabinet games. */
 export type ArcadeGameId =
   | "pickem"
   | "higher-lower"
@@ -21,12 +21,16 @@ export type ArcadeGameId =
   | "chess"
   | "tic-tac-toe"
   | "coin-toss"
-  | "endless-runner";
+  | "endless-runner"
+  | "plinko"
+  | "neon-wheel";
 
 export type ArcadeOutcome = "pending" | "won" | "lost" | "push" | "void";
 
 /** Solo = personal stake vs house (useBook). H2H = eesl_challenges ledger. */
 export type ArcadeStakeMode = "solo" | "h2h";
+
+export type ArcadeBadge = "Solo" | "H2H" | "Sports" | "Classic" | "New";
 
 export interface ArcadeResult {
   id: string;
@@ -64,51 +68,77 @@ export function arcadeUid(prefix: string): string {
 
 export const ARCADE_GAME_META: Record<
   ArcadeGameId,
-  { title: string; blurb: string; kind: "sports" | "classic" }
+  {
+    title: string;
+    blurb: string;
+    kind: "sports" | "classic" | "new";
+    badges: ArcadeBadge[];
+  }
 > = {
   pickem: {
     title: "NFL Quick Pick'em",
-    blurb: "Pick away/home from the odds board. Grade from scores when final.",
+    blurb: "Pick away/home from the odds board. Grades when the score is final.",
     kind: "sports",
+    badges: ["Solo", "Sports"],
   },
   "higher-lower": {
     title: "Higher / Lower",
     blurb: "3 rounds on |spread| or projectedPts — skip if missing.",
     kind: "sports",
+    badges: ["Solo", "Sports"],
   },
   "speed-trivia": {
     title: "Speed Trivia",
-    blurb: "60s Eastside / NFL rules pack. No invented injuries.",
+    blurb: "60s NFL history, Super Bowls, records & classic matchups.",
     kind: "sports",
+    badges: ["Solo", "Sports"],
   },
   "matchup-dodge": {
     title: "Matchup Dodge",
     blurb: "Week 1 fantasy matchup pick. Solo or E$L H2H challenge.",
     kind: "sports",
+    badges: ["Solo", "H2H", "Sports"],
   },
   pong: {
     title: "Pong",
-    blurb: "Vs CPU or 1v1 with optional E$L coin$ H2H stake.",
+    blurb: "Vs CPU or 1v1. First to 5. Optional E$L coin$ stake.",
     kind: "classic",
+    badges: ["Solo", "H2H", "Classic"],
   },
   chess: {
     title: "Chess",
-    blurb: "Thin local 2P or simple CPU. Optional E$L challenge.",
+    blurb: "Local 2P or simple CPU. Optional E$L challenge.",
     kind: "classic",
+    badges: ["Solo", "H2H", "Classic"],
   },
   "tic-tac-toe": {
     title: "Tic-Tac-Toe",
     blurb: "Vs CPU or 1v1. E$L on H2H.",
     kind: "classic",
+    badges: ["Solo", "H2H", "Classic"],
   },
   "coin-toss": {
     title: "Coin Toss Flick",
-    blurb: "Timing flick. Vs house or friend 1–5 E$L.",
+    blurb: "Hold charge + release. Vs house or friend 1–5 E$L.",
     kind: "classic",
+    badges: ["Solo", "H2H", "Classic"],
   },
   "endless-runner": {
-    title: "Endless Runner",
-    blurb: "Jump/dodge for distance. Optional E$L buy-in / prize table.",
+    title: "Eastside Run",
+    blurb: "Side-scroll gold chip run. Prize tiers 400 / 800 / 1500.",
     kind: "classic",
+    badges: ["Solo", "H2H", "Classic"],
+  },
+  plinko: {
+    title: "Eastside Plinko",
+    blurb: "Drop a chip through pegs. Multipliers 0 / 0.5 / 1 / 2 / 5.",
+    kind: "new",
+    badges: ["Solo", "New"],
+  },
+  "neon-wheel": {
+    title: "Neon Wheel",
+    blurb: "Spin for 0 / even / ×2 / ×3. Solo stake only.",
+    kind: "new",
+    badges: ["Solo", "New"],
   },
 };

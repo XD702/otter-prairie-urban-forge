@@ -14,11 +14,20 @@ import {
   parseStake,
 } from "@/lib/arcade/types";
 import { ArcadeStakeBar } from "./stake-bar";
+import {
+  ARCADE_HOWTO_COPY,
+  ArcadeHowTo,
+  ArcadeHowToExpandable,
+  useArcadeHowToGate,
+} from "./arcade-how-to";
+
 
 const SECONDS = 60;
 
 export function SpeedTriviaGame({ onClose }: { onClose: () => void }) {
   const bankroll = useBook((s) => s.bankroll);
+  const { ready: howtoReady, markReady } = useArcadeHowToGate("speed-trivia");
+  const HOW = ARCADE_HOWTO_COPY["speed-trivia"];
   const [stakeStr, setStakeStr] = useState("0");
   const [deck, setDeck] = useState<TriviaQuestion[]>([]);
   const [idx, setIdx] = useState(0);
@@ -118,6 +127,21 @@ export function SpeedTriviaGame({ onClose }: { onClose: () => void }) {
 
   const q = deck[idx];
 
+  if (!howtoReady) {
+    return (
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-xs uppercase tracking-[0.28em] text-gold">Arcade</p>
+            <h3 className="font-display text-2xl font-semibold text-cream">Speed Trivia</h3>
+          </div>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gold/30 px-4 text-sm text-cream hover:border-gold">Back</button>
+        </div>
+        <ArcadeHowTo {...HOW} gameId="speed-trivia" onPlay={markReady} />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -133,8 +157,9 @@ export function SpeedTriviaGame({ onClose }: { onClose: () => void }) {
           Back
         </button>
       </div>
+      <ArcadeHowToExpandable {...HOW} gameId="speed-trivia" />
       <p className="text-sm text-muted">
-        60 seconds. Static Eastside / NFL pack only — no invented injuries. Win with ≥60%
+        60 seconds. NFL history / famous games / records only. Win with ≥60%
         correct (≥3 answered). Even money. {ARCADE_SIM_DISCLAIMER}
       </p>
 

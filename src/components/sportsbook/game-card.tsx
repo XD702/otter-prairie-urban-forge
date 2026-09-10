@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+﻿import { Badge } from "@/components/ui/badge";
 import type { GameLine } from "@/lib/odds";
 import { liveLine, type GameScore } from "@/lib/scores";
 import { NFL_TEAMS } from "@/lib/nfl/teams";
@@ -25,7 +25,7 @@ function OddsCell({ label, value, posted, onPick, active }: CellProps) {
         posted
           ? active
             ? "border-gold bg-gold/15 text-gold"
-            : "border-gold/25 bg-ink/40 text-cream hover:border-gold/55 hover:bg-gold/10"
+            : "border-gold/25 bg-felt text-cream hover:border-gold/55 hover:bg-gold/10"
           : "cursor-not-allowed border-cream/10 bg-ink/30 text-muted",
       )}
     >
@@ -64,7 +64,7 @@ export function GameCard({ game, score }: { game: GameLine; score?: GameScore })
   return (
     <article
       className={cn(
-        "surface-felt rounded-[var(--radius-lg)] border line-gold p-3 sm:p-4",
+        "surface-ink rounded-[var(--radius-lg)] border line-gold p-3 sm:p-4",
         live && "live-edge",
       )}
     >

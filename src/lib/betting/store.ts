@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Simulated sportsbook state — bankroll, slip, tickets.
  * Client-only localStorage. No real money.
  *
@@ -14,7 +14,25 @@ import { round2, uid } from "@/lib/utils";
 export type MarketKind = "spread" | "moneyline" | "total";
 export type SelectionSide = "home" | "away" | "over" | "under";
 export type TicketStatus = "open" | "won" | "lost" | "push" | "void";
-export type BookTab = "board" | "tickets" | "fantasy" | "chat" | "league" | "challenges" | "markets" | "arcade" | "house";
+export type BookTab = "board" | "squad" | "league" | "club";
+
+const VALID_TABS: readonly BookTab[] = ["board", "squad", "league", "club"] as const;
+
+export function coerceBookTab(tab: unknown): BookTab {
+  if (tab === "board" || tab === "squad" || tab === "league" || tab === "club") return tab;
+  return "board";
+}
+
+/** Map legacy root tabs (pre–4-tab IA) to the new BookTab + optional slipOpen. */
+export function migrateLegacyBookTab(raw: unknown): { tab: BookTab; slipOpen?: boolean; leagueSub?: "chat" } {
+  if (raw === "tickets") return { tab: "board", slipOpen: true };
+  if (raw === "fantasy") return { tab: "squad" };
+  if (raw === "chat") return { tab: "league", leagueSub: "chat" };
+  if (raw === "challenges" || raw === "markets" || raw === "arcade" || raw === "house") {
+    return { tab: "club" };
+  }
+  return { tab: coerceBookTab(raw) };
+}
 
 export interface BetLeg {
   id: string;
@@ -53,6 +71,8 @@ interface BookState {
   tickets: Ticket[];
   tab: BookTab;
   slipOpen: boolean;
+  /** Slip sheet secondary panel: active slip vs My tickets. */
+  slipPanel: "slip" | "tickets";
   notice: string | null;
   addLeg: (leg: Omit<BetLeg, "id">) => void;
   removeLeg: (id: string) => void;
@@ -61,6 +81,7 @@ interface BookState {
   placeBet: () => void;
   setTab: (tab: BookTab) => void;
   setSlipOpen: (open: boolean) => void;
+  setSlipPanel: (panel: "slip" | "tickets") => void;
   clearNotice: () => void;
   resetBook: () => void;
 }
@@ -74,6 +95,7 @@ export const useBook = create<BookState>()(
       tickets: [],
       tab: "board",
       slipOpen: false,
+      slipPanel: "slip",
       notice: null,
       addLeg: (leg) => {
         const spreadPosted = leg.market === "spread" && leg.line !== null;
@@ -88,7 +110,7 @@ export const useBook = create<BookState>()(
         const slip = existing
           ? get().slip.map((item) => (item.id === existing.id ? { ...next, id: existing.id } : item))
           : [...get().slip, next];
-        set({ slip, notice: null, slipOpen: true });
+        set({ slip, notice: null, slipOpen: true, slipPanel: "slip" });
       },
       removeLeg: (id) => set({ slip: get().slip.filter((leg) => leg.id !== id) }),
       clearSlip: () => set({ slip: [] }),
@@ -130,12 +152,16 @@ export const useBook = create<BookState>()(
           notice: priced
             ? null
             : "Ticket booked unpriced — juice was not on this BetMGM snapshot. Simulation only.",
-          tab: "tickets",
-          slipOpen: false,
+          slipOpen: true,
+          slipPanel: "tickets",
         });
       },
-      setTab: (tab) => set({ tab, slipOpen: false }),
+      setTab: (tab) => {
+        const next = coerceBookTab(tab);
+        set({ tab: next, slipOpen: false });
+      },
       setSlipOpen: (slipOpen) => set({ slipOpen }),
+      setSlipPanel: (slipPanel) => set({ slipPanel }),
       clearNotice: () => set({ notice: null }),
       resetBook: () =>
         set({
@@ -148,29 +174,66 @@ export const useBook = create<BookState>()(
     }),
     {
       name: "eastside-legends-sim",
-      version: 2,
+      version: 3,
       migrate: (persisted, version) => {
         const state = (persisted ?? {}) as {
           bankroll?: number;
           slip?: BetLeg[];
           stake?: number;
           tickets?: Ticket[];
+          tab?: unknown;
+          slipOpen?: boolean;
+          slipPanel?: "slip" | "tickets";
         };
+        let next = { ...state };
         if (version < 2) {
-          return {
-            ...state,
+          next = {
+            ...next,
             bankroll: STARTING_BANKROLL,
             stake: Math.min(state.stake ?? DEFAULT_STAKE, STARTING_BANKROLL),
           };
         }
-        return state;
+        if (version < 3) {
+          const migrated = migrateLegacyBookTab(state.tab);
+          next = {
+            ...next,
+            tab: migrated.tab,
+            slipOpen: migrated.slipOpen ?? state.slipOpen ?? false,
+            slipPanel: state.slipPanel === "tickets" ? "tickets" : "slip",
+          };
+          // Stash league chat intent for shell (session) when migrating from chat tab
+          if (migrated.leagueSub === "chat") {
+            try {
+              sessionStorage.setItem("eastside-open-chat", "1");
+            } catch {
+              /* ignore */
+            }
+          }
+        } else {
+          next = {
+            ...next,
+            tab: coerceBookTab(state.tab),
+          };
+        }
+        if (!VALID_TABS.includes(next.tab as BookTab)) {
+          next.tab = "board";
+        }
+        return next;
       },
       partialize: (state) => ({
         bankroll: state.bankroll,
         slip: state.slip,
         stake: state.stake,
         tickets: state.tickets,
+        tab: state.tab,
+        slipOpen: state.slipOpen,
+        slipPanel: state.slipPanel,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const tab = coerceBookTab(state.tab);
+        if (tab !== state.tab) state.tab = tab;
+      },
     },
   ),
 );

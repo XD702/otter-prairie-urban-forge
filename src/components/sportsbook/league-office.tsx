@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { LeagueChat } from "@/components/sportsbook/league-chat";
 import { TEAMS } from "@/lib/fantasy";
 import {
   EMPTY_MATCHUP_RESULTS,
@@ -29,11 +30,11 @@ import {
 } from "@/lib/fantasy/keepers";
 import { cn } from "@/lib/utils";
 
-type LeagueSubTab = "standings" | "playoffs" | "keepers";
+export type LeagueSubTab = "standings" | "chat" | "keepers";
 
 const SUB_TABS: { id: LeagueSubTab; label: string }[] = [
   { id: "standings", label: "Standings" },
-  { id: "playoffs", label: "Playoffs" },
+  { id: "chat", label: "Chat" },
   { id: "keepers", label: "Keepers" },
 ];
 
@@ -50,56 +51,6 @@ function teamLabel(teamId: string | null): string {
   if (!teamId) return "TBD";
   const t = TEAMS.find((x) => x.id === teamId);
   return t?.teamName ?? "TBD";
-}
-
-function StandingsPanel({ rows }: { rows: StandingRow[] }) {
-  const placeholders = standingsArePlaceholders(rows);
-  return (
-    <div className="space-y-3">
-      {placeholders ? (
-        <Badge tone="unavailable">Placeholders — no results yet</Badge>
-      ) : (
-        <Badge tone="final">From completed results</Badge>
-      )}
-      <div className="overflow-x-auto rounded-[var(--radius-xl)] border border-gold/25 bg-felt-deep">
-        <table className="w-full min-w-[36rem] text-left text-sm">
-          <thead>
-            <tr className="border-b border-gold/20 text-[10px] uppercase tracking-[0.18em] text-gold/80">
-              <th className="px-3 py-2.5 font-medium">Rank</th>
-              <th className="px-3 py-2.5 font-medium">Team</th>
-              <th className="px-3 py-2.5 font-medium">Manager</th>
-              <th className="px-3 py-2.5 font-medium tabular-nums">W</th>
-              <th className="px-3 py-2.5 font-medium tabular-nums">L</th>
-              <th className="px-3 py-2.5 font-medium tabular-nums">T</th>
-              <th className="px-3 py-2.5 font-medium tabular-nums">PF</th>
-              <th className="px-3 py-2.5 font-medium tabular-nums">PA</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr
-                key={row.teamId}
-                className="border-b border-gold/10 text-cream last:border-0"
-              >
-                <td className="px-3 py-2 tabular-nums text-muted">{dash(row.rank)}</td>
-                <td className="px-3 py-2">{row.teamName}</td>
-                <td className="px-3 py-2 text-muted">{row.manager ?? "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{dash(row.wins)}</td>
-                <td className="px-3 py-2 tabular-nums">{dash(row.losses)}</td>
-                <td className="px-3 py-2 tabular-nums">{dash(row.ties)}</td>
-                <td className="px-3 py-2 tabular-nums">{dash(row.pf)}</td>
-                <td className="px-3 py-2 tabular-nums">{dash(row.pa)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-xs leading-relaxed text-muted text-pretty">
-        W-L-T and PF/PA come only from completed matchup results. Week 1 seed
-        matchups are labels only — no invented winners. Simulation only.
-      </p>
-    </div>
-  );
 }
 
 function BracketGame({ slot }: { slot: BracketSlot }) {
@@ -143,7 +94,7 @@ function PlayoffsPanel() {
         return (
           <div
             key={week}
-            className="rounded-[var(--radius-xl)] border border-gold/25 bg-felt-deep p-3"
+            className="surface-ink rounded-[var(--radius-xl)] p-3"
           >
             <p className="mb-2 font-display text-xs uppercase tracking-[0.22em] text-gold">
               Week {week}
@@ -157,6 +108,65 @@ function PlayoffsPanel() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function StandingsPanel({ rows }: { rows: StandingRow[] }) {
+  const placeholders = standingsArePlaceholders(rows);
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        {placeholders ? (
+          <Badge tone="unavailable">Placeholders — no results yet</Badge>
+        ) : (
+          <Badge tone="final">From completed results</Badge>
+        )}
+        <div className="surface-ink overflow-x-auto rounded-[var(--radius-xl)]">
+          <table className="w-full min-w-[36rem] text-left text-sm">
+            <thead>
+              <tr className="border-b border-gold/20 text-[10px] uppercase tracking-[0.18em] text-gold/80">
+                <th className="px-3 py-2.5 font-medium">Rank</th>
+                <th className="px-3 py-2.5 font-medium">Team</th>
+                <th className="px-3 py-2.5 font-medium">Manager</th>
+                <th className="px-3 py-2.5 font-medium tabular-nums">W</th>
+                <th className="px-3 py-2.5 font-medium tabular-nums">L</th>
+                <th className="px-3 py-2.5 font-medium tabular-nums">T</th>
+                <th className="px-3 py-2.5 font-medium tabular-nums">PF</th>
+                <th className="px-3 py-2.5 font-medium tabular-nums">PA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr
+                  key={row.teamId}
+                  className="border-b border-gold/10 text-cream last:border-0 odd:bg-ink even:bg-cream/[0.035]"
+                >
+                  <td className="px-3 py-2 tabular-nums text-muted">{dash(row.rank)}</td>
+                  <td className="px-3 py-2">{row.teamName}</td>
+                  <td className="px-3 py-2 text-muted">{row.manager ?? "—"}</td>
+                  <td className="px-3 py-2 tabular-nums">{dash(row.wins)}</td>
+                  <td className="px-3 py-2 tabular-nums">{dash(row.losses)}</td>
+                  <td className="px-3 py-2 tabular-nums">{dash(row.ties)}</td>
+                  <td className="px-3 py-2 tabular-nums">{dash(row.pf)}</td>
+                  <td className="px-3 py-2 tabular-nums">{dash(row.pa)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs leading-relaxed text-muted text-pretty">
+          W-L-T and PF/PA come only from completed matchup results. Week 1 seed
+          matchups are labels only — no invented winners. Simulation only.
+        </p>
+      </div>
+
+      <div>
+        <p className="mb-3 font-display text-xs uppercase tracking-[0.28em] text-gold">
+          Playoffs
+        </p>
+        <PlayoffsPanel />
+      </div>
     </div>
   );
 }
@@ -206,7 +216,7 @@ function KeepersPanel() {
           return (
             <li
               key={team.id}
-              className="rounded-[var(--radius-xl)] border border-gold/20 bg-felt-deep p-3"
+              className="surface-ink rounded-[var(--radius-xl)] p-3"
             >
               <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
                 <div>
@@ -269,11 +279,20 @@ function KeepersPanel() {
 }
 
 /**
- * League Office — Standings | Playoffs | Keepers.
- * Style matches sportsbook felt/gold/cream. No invented W-L or keepers.
+ * League Office — Standings (incl. playoffs) | Chat | Keepers.
+ * Style matches sportsbook void/gold/cream. No invented W-L or keepers.
  */
-export function LeagueOffice() {
-  const [sub, setSub] = useState<LeagueSubTab>("standings");
+export function LeagueOffice({
+  initialSub = "standings",
+}: {
+  initialSub?: LeagueSubTab;
+}) {
+  const [sub, setSub] = useState<LeagueSubTab>(initialSub);
+
+  useEffect(() => {
+    setSub(initialSub);
+  }, [initialSub]);
+
   // Results feed starts empty — do not invent Week 1 winners.
   const rows = useMemo(
     () => buildStandingsFromResults(EMPTY_MATCHUP_RESULTS),
@@ -290,12 +309,12 @@ export function LeagueOffice() {
           League
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Eastside Legends · standings, playoffs, keepers
+          Eastside Legends · standings, chat, keepers
         </p>
       </div>
 
       <div
-        className="mb-4 flex flex-wrap gap-1.5 rounded-[var(--radius-xl)] border border-gold/20 bg-felt-deep p-1.5"
+        className="mb-4 flex flex-wrap gap-1.5 rounded-[var(--radius-xl)] border line-gold bg-ink p-1.5"
         role="tablist"
         aria-label="League office sections"
       >
@@ -319,7 +338,7 @@ export function LeagueOffice() {
       </div>
 
       {sub === "standings" ? <StandingsPanel rows={rows} /> : null}
-      {sub === "playoffs" ? <PlayoffsPanel /> : null}
+      {sub === "chat" ? <LeagueChat /> : null}
       {sub === "keepers" ? <KeepersPanel /> : null}
     </section>
   );
