@@ -1,12 +1,92 @@
 {
   "leagueId": "288732",
   "leagueKey": "f1.l.288732",
-  "pulledAt": null,
+  "pulledAt": "2026-09-11T19:40:00-07:00",
   "source": "yahoo",
   "settings": {},
-  "teams": [],
-  "matchups": [],
+  "teams": [
+    { "teamId": "go-birds", "name": "Go birds D**k head", "manager": "Roberto", "roster": [] },
+    { "teamId": "gibb-it-to-me-baby", "name": "Gibb it to me Baby", "manager": "Edwin", "roster": [] },
+    { "teamId": "apache-dogs", "name": "APACHEDOGS", "manager": "MAJ", "roster": [] },
+    { "teamId": "goodwrench", "name": "Goodwrench", "manager": "matthew", "roster": [] },
+    { "teamId": "zenahc-cool-arrows", "name": "Zenahc cool arrows", "manager": "Cornelio", "roster": [] },
+    { "teamId": "cheesehead-hooligans", "name": "Cheesehead hooligans", "manager": "Leon", "roster": [] },
+    { "teamId": "tds-in-yo-face", "name": "TDsInYoFace", "manager": "Jonathan", "roster": [] },
+    { "teamId": "such-a-burden", "name": "Such a Burden", "manager": "Jaime Bravo", "roster": [] },
+    { "teamId": "wstd-mngmnt", "name": "WSTD MNGMNT", "manager": "Willy", "roster": [] },
+    { "teamId": "cheese-me", "name": "Cheese me!", "manager": "Geo", "roster": [] },
+    { "teamId": "taylor-gang", "name": "Taylor Gang", "manager": "Ryan", "roster": [] },
+    { "teamId": "juice-booze", "name": "Juice & Booze", "manager": "Hugo", "roster": [] }
+  ],
+  "matchups": [
+    {
+      "week": 1,
+      "leftTeamId": "go-birds",
+      "rightTeamId": "gibb-it-to-me-baby",
+      "scores": {
+        "leftActual": 0.0,
+        "leftProjected": 95.2,
+        "rightActual": 21.5,
+        "rightProjected": 117.4
+      }
+    },
+    {
+      "week": 1,
+      "leftTeamId": "apache-dogs",
+      "rightTeamId": "goodwrench",
+      "scores": {
+        "leftActual": 11.0,
+        "leftProjected": 99.12,
+        "rightActual": 28.02,
+        "rightProjected": 87.71
+      }
+    },
+    {
+      "week": 1,
+      "leftTeamId": "zenahc-cool-arrows",
+      "rightTeamId": "cheesehead-hooligans",
+      "scores": {
+        "leftActual": 12.5,
+        "leftProjected": 104.21,
+        "rightActual": 13.2,
+        "rightProjected": 83.8
+      }
+    },
+    {
+      "week": 1,
+      "leftTeamId": "tds-in-yo-face",
+      "rightTeamId": "such-a-burden",
+      "scores": {
+        "leftActual": 9.5,
+        "leftProjected": 103.2,
+        "rightActual": 2.6,
+        "rightProjected": 86.54
+      }
+    },
+    {
+      "week": 1,
+      "leftTeamId": "wstd-mngmnt",
+      "rightTeamId": "cheese-me",
+      "scores": {
+        "leftActual": 10.1,
+        "leftProjected": 77.26,
+        "rightActual": 10.9,
+        "rightProjected": 101.5
+      }
+    },
+    {
+      "week": 1,
+      "leftTeamId": "taylor-gang",
+      "rightTeamId": "juice-booze",
+      "scores": {
+        "leftActual": 5.6,
+        "leftProjected": 83.9,
+        "rightActual": 19.8,
+        "rightProjected": 93.46
+      }
+    }
+  ],
   "standings": [],
-  "_stub": true,
-  "_note": "Missing-safe stub — Go Birds owns live pull. Empty teams/matchups; scores absent. Do not invent points or PPR."
+  "_stub": false,
+  "_note": "Week 1 H2H team totals from Yahoo All Matchups screenshot (~7:40 PT Sep 11 2026). Records still 0-0-0. No player box scores this pass."
 }
