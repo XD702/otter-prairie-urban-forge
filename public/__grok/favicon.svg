@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="East Side Social Club E$L">
+  <rect width="512" height="512" fill="#070A08"/>
+  <circle cx="256" cy="256" r="194" fill="#D4AF57"/>
+  <circle cx="256" cy="256" r="151" fill="#0E3B28"/>
+  <circle cx="256" cy="256" r="132" fill="none" stroke="#D4AF57" stroke-width="10"/>
+  <!-- chip notches -->
+  <g stroke="#070A08" stroke-width="14" stroke-linecap="butt">
+    <line x1="256" y1="62" x2="256" y2="88"/>
+    <line x1="256" y1="424" x2="256" y2="450"/>
+    <line x1="62" y1="256" x2="88" y2="256"/>
+    <line x1="424" y1="256" x2="450" y2="256"/>
+    <line x1="119" y1="119" x2="138" y2="138"/>
+    <line x1="374" y1="374" x2="393" y2="393"/>
+    <line x1="393" y1="119" x2="374" y2="138"/>
+    <line x1="138" y1="374" x2="119" y2="393"/>
+  </g>
+  <text x="256" y="278" text-anchor="middle" font-family="Arial Black, Helvetica, sans-serif" font-size="110" font-weight="700" fill="#D4AF57">E$L</text>
+</svg>

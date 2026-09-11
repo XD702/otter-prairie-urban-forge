@@ -1,8 +1,10 @@
 ﻿@import "tailwindcss";
 
 @theme {
-  --font-display: "Oswald", "Arial Narrow", "Segoe UI", sans-serif;
-  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Cinzel", "Times New Roman", serif;
+  --font-club: "Oswald", "Arial Narrow", system-ui, sans-serif;
+  --font-sans: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --text-kicker: 0.625rem;
 
   --color-void: #070A08;
   --color-felt: #0E3B28;
@@ -100,6 +102,18 @@
 
 .line-gold {
   border-color: rgba(212, 175, 87, 0.22);
+}
+
+.club-kicker {
+  font-family: var(--font-club);
+  font-size: var(--text-kicker);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--color-gold) 80%, transparent);
+}
+
+.casino-card {
+  background: color-mix(in oklab, var(--color-ink) 88%, var(--color-felt-deep));
 }
 
 @keyframes ticker {

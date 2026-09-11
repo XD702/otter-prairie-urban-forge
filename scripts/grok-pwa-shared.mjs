@@ -6,6 +6,88 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+export const ESL_SW_CACHE = "esl-club-shell-v20260911c";
+export const ESL_ICON_V = "20260911c";
+export const ESL_APP_NAME = "East Side Social Club";
+export const ESL_SHORT_NAME = "E$L Club";
+export const ESL_THEME = "#070A08";
+
+export function renderEslServiceWorker() {
+  return `/* East Side Social Club — ${ESL_SW_CACHE}
+ * Network-first HTML + live data. Versioned cache. skipWaiting + clients.claim.
+ * Served with Cache-Control: no-cache so phones pick up a new worker after Publish.
+ */
+const CACHE = "${ESL_SW_CACHE}";
+const SHELL = [
+  "/",
+  "/favicon.svg?v=${ESL_ICON_V}",
+  "/icon-180.png?v=${ESL_ICON_V}",
+  "/icon-192.png?v=${ESL_ICON_V}",
+  "/icon-512.png?v=${ESL_ICON_V}",
+  "/manifest.webmanifest",
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => cache.addAll(SHELL).catch(() => undefined)).then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+function shouldBypass(url) {
+  if (url.origin !== self.location.origin) return true;
+  const path = url.pathname;
+  if (path.startsWith("/api/")) return true;
+  if (path.startsWith("/odds/")) return true;
+  if (path.startsWith("/fantasy/")) return true;
+  if (path.startsWith("/join")) return true;
+  if (path.startsWith("/login")) return true;
+  if (path.startsWith("/chat")) return true;
+  if (path.startsWith("/@")) return true;
+  if (path.startsWith("/node_modules")) return true;
+  if (path.includes("vite")) return true;
+  return false;
+}
+
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  if (request.method !== "GET") return;
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return;
+  }
+  if (shouldBypass(url)) return;
+
+  const isDocument =
+    request.mode === "navigate" ||
+    (request.headers.get("accept") || "").includes("text/html") ||
+    url.pathname === "/";
+
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        if (response && response.ok && !isDocument) {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+        }
+        return response;
+      })
+      .catch(() => caches.match(request).then((cached) => cached || caches.match("/"))),
+  );
+});
+`;
+}
+
 export const DEFAULT_APP_NAME = "Grok App";
 export const OG_SERVICE_URL_DEFAULT = "https://og.grok.me";
 export const OG_SITE_REL_PATH = "src/lib/og/site.json";
@@ -158,22 +240,77 @@ export function renderInstallPageHtml(template, { host, url } = {}) {
 }
 
 export function renderWebManifest(hostHeader) {
-  const name = appNameFromHost(hostHeader);
+  const site = readOgSite();
+  const fromSite = String(site.title ?? "").trim();
+  const name = fromSite || appNameFromHost(hostHeader);
+  const short =
+    String(site.short_name ?? site.shortName ?? "").trim() ||
+    (fromSite ? ESL_SHORT_NAME : name);
+  const themeRaw = String(site.color ?? "").trim();
+  const themeHex = themeRaw.startsWith("#") ? themeRaw : themeRaw ? `#${themeRaw}` : ESL_THEME;
+  const theme = /^#[0-9a-fA-F]{6}$/.test(themeHex) ? themeHex : ESL_THEME;
+  const v = ESL_ICON_V;
   return JSON.stringify(
     {
       name,
-      short_name: name,
+      short_name: short,
       id: "/",
       start_url: "/",
       scope: "/",
       display: "standalone",
-      background_color: "#000000",
-      theme_color: "#000000",
+      background_color: theme,
+      theme_color: theme,
+      description:
+        String(site.description ?? "").trim() ||
+        "East Side Social Club. Simulation only. E$L coin$ — no real money.",
       icons: [
         {
-          src: "/__grok/icon-180.png",
+          src: `/icon-192.png?v=${v}`,
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: `/icon-512.png?v=${v}`,
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: `/icon-192.png?v=${v}`,
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "maskable",
+        },
+        {
+          src: `/icon-512.png?v=${v}`,
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "maskable",
+        },
+        {
+          src: `/icon-180.png?v=${v}`,
           sizes: "180x180",
           type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: `/__grok/icon-180.png?v=${v}`,
+          sizes: "180x180",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: `/__grok/icon-192.png?v=${v}`,
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: `/__grok/icon-512.png?v=${v}`,
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any",
         },
       ],
     },
@@ -182,21 +319,30 @@ export function renderWebManifest(hostHeader) {
   );
 }
 
-export function grokPwaHeadTags(appName = DEFAULT_APP_NAME) {
+export function grokPwaHeadTags(appName = DEFAULT_APP_NAME, site = {}) {
+  const short =
+    String(site.short_name ?? site.shortName ?? "").trim() || appName || ESL_SHORT_NAME;
+  const themeRaw = String(site.color ?? "").trim();
+  const themeHex = themeRaw.startsWith("#") ? themeRaw : themeRaw ? `#${themeRaw}` : ESL_THEME;
+  const theme = /^#[0-9a-fA-F]{6}$/.test(themeHex) ? themeHex : ESL_THEME;
+  const v = ESL_ICON_V;
   return [
     // Standalone display comes from the manifest ("display": "standalone");
     // the legacy *-web-app-capable metas it replaces are deliberately absent.
     ["manifest", '<link rel="manifest" href="/__grok/manifest.webmanifest">'],
-    ["apple-touch-icon", '<link rel="apple-touch-icon" href="/__grok/icon-180.png">'],
+    [
+      "apple-touch-icon",
+      `<link rel="apple-touch-icon" href="/__grok/icon-180.png?v=${v}">`,
+    ],
     [
       "apple-mobile-web-app-title",
-      `<meta name="apple-mobile-web-app-title" content="${escapeHtml(appName)}">`,
+      `<meta name="apple-mobile-web-app-title" content="${escapeHtml(short)}">`,
     ],
     [
       "apple-mobile-web-app-status-bar-style",
       '<meta name="apple-mobile-web-app-status-bar-style" content="black">',
     ],
-    ["theme-color", '<meta name="theme-color" content="#000000">'],
+    ["theme-color", `<meta name="theme-color" content="${escapeHtml(theme)}">`],
   ];
 }
 
@@ -434,10 +580,10 @@ export function injectGrokPwaHead(html, ctx = {}) {
   );
   let next = stripShareMetaTags(html);
 
-  const missing = grokPwaHeadTags(appName)
+  const missing = grokPwaHeadTags(appName, site)
     .filter(([key]) => {
       if (key === "manifest") return !next.includes('href="/__grok/manifest.webmanifest"');
-      if (key === "apple-touch-icon") return !next.includes('href="/__grok/icon-180.png"');
+      if (key === "apple-touch-icon") return !next.includes("/__grok/icon-180.png");
       return !next.includes(`name="${key}"`);
     })
     .map(([, tag]) => tag);

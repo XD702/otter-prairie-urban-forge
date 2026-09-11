@@ -21,6 +21,7 @@ import {
   createHeadInjector,
   isDocumentPath,
   isInstallQuery,
+  renderEslServiceWorker,
   renderInstallPageHtml,
   renderWebManifest,
 } from "../../scripts/grok-pwa-shared.mjs";
@@ -65,16 +66,37 @@ export default async function grokPwaMiddleware(
   next: () => unknown | Promise<unknown>,
 ): Promise<unknown> {
   const method = (event.req.method ?? "GET").toUpperCase();
-  if (method !== "GET") return next();
+  if (method !== "GET" && method !== "HEAD") return next();
 
   const path = event.url.pathname;
   const urlWithQuery = path + event.url.search;
+  const headOnly = method === "HEAD";
 
-  if (path === "/__grok/manifest.webmanifest" || path === "/__grok/manifest.json") {
-    return new Response(renderWebManifest(requestHost(event)), {
+  if (path === "/sw.js") {
+    const body = renderEslServiceWorker();
+    return new Response(headOnly ? null : body, {
+      headers: {
+        "content-type": "application/javascript; charset=utf-8",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        pragma: "no-cache",
+        expires: "0",
+        "content-length": String(Buffer.byteLength(body)),
+      },
+    });
+  }
+
+  if (
+    path === "/manifest.webmanifest" ||
+    path === "/manifest.json" ||
+    path === "/__grok/manifest.webmanifest" ||
+    path === "/__grok/manifest.json"
+  ) {
+    const body = renderWebManifest(requestHost(event));
+    return new Response(headOnly ? null : body, {
       headers: {
         "content-type": "application/manifest+json; charset=utf-8",
         "cache-control": "no-cache",
+        "content-length": String(Buffer.byteLength(body)),
       },
     });
   }

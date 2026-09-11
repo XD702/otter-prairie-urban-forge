@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,6 @@ type InvitePanelProps = {
 
 /**
  * Header strip: copy invite link + n/12 + claimed team badge.
- * Embed in league-chat.tsx header (see patches/league-chat-invite.md).
  */
 export function InvitePanel({
   memberCount,
@@ -37,13 +36,22 @@ export function InvitePanel({
     setInviteUrl(buildInviteUrl());
   }, []);
 
+  function currentInviteUrl() {
+    return inviteUrl || buildInviteUrl();
+  }
+
   async function copyLink() {
+    const url = currentInviteUrl();
+    if (!url) {
+      setStatus("Invite link is not ready yet — refresh and try again.");
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(inviteUrl);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      setStatus("Copy failed â€” select the link manually.");
+      setStatus("Copy failed — select the link manually.");
     }
   }
 
@@ -62,7 +70,7 @@ export function InvitePanel({
     setStatus(
       error
         ? error.message
-        : `Magic link sent to ${trimmed}. Theyâ€™ll land on Join.`,
+        : `Magic link sent to ${trimmed}. They'll land on Join.`,
     );
     if (!error) setEmail("");
   }
@@ -74,7 +82,7 @@ export function InvitePanel({
           <Link2 className="size-4 text-gold" />
           <span className="text-xs text-muted">Invite</span>
           <code className="max-w-[14rem] truncate rounded border border-gold/20 px-2 py-0.5 text-[11px] text-cream sm:max-w-xs">
-            {inviteUrl}
+            {inviteUrl || "Preparing link…"}
           </code>
           <Button
             type="button"
@@ -106,7 +114,7 @@ export function InvitePanel({
           <Input
             type="email"
             autoComplete="email"
-            placeholder="Friendâ€™s real email (optional)"
+            placeholder="Friend's real email (optional)"
             value={email}
             onChange={(ev) => setEmail(ev.target.value)}
             className="h-8 flex-1 text-xs"
@@ -117,7 +125,7 @@ export function InvitePanel({
             className="h-8 text-xs"
             disabled={busy || !email.trim()}
           >
-            {busy ? "Sendingâ€¦" : "Send magic link"}
+            {busy ? "Sending…" : "Send magic link"}
           </Button>
         </form>
       ) : null}
@@ -126,4 +134,3 @@ export function InvitePanel({
     </div>
   );
 }
-

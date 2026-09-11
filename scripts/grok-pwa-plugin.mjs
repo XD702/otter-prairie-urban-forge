@@ -13,6 +13,7 @@ import {
   injectGrokPwaHead,
   isDocumentPath,
   isInstallQuery,
+  renderEslServiceWorker,
   renderInstallPageHtml,
   renderWebManifest,
   snapshotOgIdentity,
@@ -47,17 +48,42 @@ function serveGrokPwa(middlewares) {
     const rawUrl = req.url ?? "";
     const pathOnly = rawUrl.split("?", 1)[0] ?? "";
     const method = (req.method ?? "GET").toUpperCase();
-    if (method !== "GET") {
+    if (method !== "GET" && method !== "HEAD") {
       next();
       return;
     }
 
-    if (pathOnly === "/__grok/manifest.webmanifest" || pathOnly === "/__grok/manifest.json") {
+    if (pathOnly === "/sw.js") {
+      const body = Buffer.from(renderEslServiceWorker(), "utf8");
+      res.statusCode = 200;
+      res.setHeader("content-type", "application/javascript; charset=utf-8");
+      res.setHeader("cache-control", "no-cache, no-store, must-revalidate");
+      res.setHeader("pragma", "no-cache");
+      res.setHeader("expires", "0");
+      res.setHeader("content-length", String(body.byteLength));
+      if (method === "HEAD") {
+        res.end();
+        return;
+      }
+      res.end(body);
+      return;
+    }
+
+    if (
+      pathOnly === "/manifest.webmanifest" ||
+      pathOnly === "/manifest.json" ||
+      pathOnly === "/__grok/manifest.webmanifest" ||
+      pathOnly === "/__grok/manifest.json"
+    ) {
       const body = Buffer.from(renderWebManifest(requestHost(req)), "utf8");
       res.statusCode = 200;
       res.setHeader("content-type", "application/manifest+json; charset=utf-8");
       res.setHeader("cache-control", "no-cache");
       res.setHeader("content-length", String(body.byteLength));
+      if (method === "HEAD") {
+        res.end();
+        return;
+      }
       res.end(body);
       return;
     }

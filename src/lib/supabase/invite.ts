@@ -5,10 +5,9 @@
  * public.league_invites (see supabase/team-claims.sql). Either works;
  * client does not invent accounts — real emails only via magic link.
  *
- * Auth note: laptop /login may still use better-auth email+password.
- * Chat RLS needs Supabase auth.uid(), so the Join page uses
- * getSupabase().auth.signInWithOtp with emailRedirectTo the join URL.
- * AccountBar may still point at /login — Join handles invite OTP itself.
+ * Chat RLS needs Supabase auth.uid(), so Join uses signInWithOtp with
+ * emailRedirectTo = `${origin}/join?code=EASTSIDE` (live origin only).
+ * Never ship localhost as a visible/copy default.
  */
 
 export const INVITE_CODE = "EASTSIDE";
@@ -19,12 +18,22 @@ export type InviteParse = {
   valid: boolean;
 };
 
-/** Build shareable invite URL: `${origin}/join?code=EASTSIDE`. */
+function liveOrigin(origin?: string): string {
+  if (origin && origin.trim()) return origin.replace(/\/$/, "");
+  if (typeof window !== "undefined" && window.location?.origin) {
+    const o = window.location.origin;
+    if (o && !/localhost|127\.0\.0\.1/i.test(o)) return o;
+    // Preview in this sandbox is fine to use the current origin.
+    return o;
+  }
+  return "";
+}
+
+/** Build shareable invite URL: `${origin}/join?code=EASTSIDE`. Empty on SSR. */
 export function buildInviteUrl(origin?: string): string {
-  const base =
-    origin ??
-    (typeof window !== "undefined" ? window.location.origin : "http://localhost:8080");
-  const url = new URL("/join", base.replace(/\/$/, ""));
+  const base = liveOrigin(origin);
+  if (!base) return "";
+  const url = new URL("/join", `${base}/`);
   url.searchParams.set("code", INVITE_CODE);
   return url.toString();
 }

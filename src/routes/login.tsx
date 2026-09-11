@@ -11,19 +11,8 @@ import {
 
 export const Route = createFileRoute("/login")({ component: Login });
 
-const OPEN_CHAT_KEY = "eastside-open-chat";
-
-function goToChat() {
-  try {
-    sessionStorage.setItem(OPEN_CHAT_KEY, "1");
-  } catch {
-    /* ignore */
-  }
-  window.location.assign("/");
-}
-
 function Login() {
-  const [mode, setMode] = useState<"signup" | "signin">("signup");
+  const [mode, setMode] = useState<"signup" | "signin">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,7 +45,7 @@ function Login() {
           return;
         }
       }
-      goToChat();
+      window.location.assign("/");
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Sign-in failed.");
     } finally {
@@ -68,17 +57,30 @@ function Login() {
     <main className="felt-bg grid min-h-dvh place-items-center p-6 text-cream">
       <div className="w-full max-w-md space-y-5 rounded-2xl border border-gold/25 bg-felt-deep/90 p-6">
         <div>
-          <p className="font-display text-[11px] uppercase tracking-[0.32em] text-gold">
-            Eastside Legends
-          </p>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">
-            {mode === "signup" ? "Create an account" : "Sign in"}
+          <p className="club-kicker">East Side Social Club · After Dark</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">
+            {mode === "signup" ? "Club account" : "Club account"}
           </h1>
           <p className="mt-2 text-sm text-muted">
-            Email and password only — no magic link, so nothing is sent to a
-            dead localhost URL. After this you land in league chat.
+            Simulation only. E$L coin$ — no real money. This is a club profile,
+            not Yahoo, Grok, or bank login.
           </p>
         </div>
+
+        <section className="rounded-xl border border-gold/35 bg-gold/10 p-4 text-sm text-cream">
+          <p className="font-display text-gold">League chat is next door</p>
+          <p className="mt-1 text-muted">
+            A club account here does not open group chat. Chat needs the invite
+            magic link so the room can see you.
+          </p>
+          <Link
+            to="/join"
+            search={{ code: "EASTSIDE" }}
+            className="mt-3 inline-flex min-h-11 items-center rounded-full border border-gold bg-gold px-4 text-sm font-semibold text-ink"
+          >
+            Join chat with invite
+          </Link>
+        </section>
 
         {authEnabled ? (
           <form onSubmit={onSubmit} className="space-y-3">
@@ -88,7 +90,7 @@ function Login() {
                 <Input
                   name="name"
                   autoComplete="name"
-                  placeholder="Your name in chat"
+                  placeholder="Your name at the club"
                   value={name}
                   onChange={(ev) => setName(ev.target.value)}
                 />
@@ -121,17 +123,17 @@ function Login() {
               {busy
                 ? "Working…"
                 : mode === "signup"
-                  ? "Create account"
-                  : "Sign in"}
+                  ? "Create club account"
+                  : "Sign in to club account"}
             </Button>
             {status ? <p className="text-sm text-loss">{status}</p> : null}
           </form>
         ) : (
-          <p className="text-sm text-muted">Sign-in is disabled.</p>
+          <p className="text-sm text-muted">Club accounts are disabled here.</p>
         )}
 
         <p className="text-sm text-muted">
-          {mode === "signup" ? "Already have an account?" : "New here?"}{" "}
+          {mode === "signup" ? "Already have a club account?" : "New here?"}{" "}
           <button
             type="button"
             className="text-gold underline-offset-4 hover:underline"
@@ -140,7 +142,7 @@ function Login() {
               setStatus(null);
             }}
           >
-            {mode === "signup" ? "Sign in" : "Create an account"}
+            {mode === "signup" ? "Sign in" : "Create a club account"}
           </button>
         </p>
 
@@ -154,11 +156,6 @@ function Login() {
                 variant="felt"
                 className="w-full"
                 onClick={() => {
-                  try {
-                    sessionStorage.setItem(OPEN_CHAT_KEY, "1");
-                  } catch {
-                    /* ignore */
-                  }
                   void signIn(p.providerId, { callbackURL: "/" });
                 }}
               >

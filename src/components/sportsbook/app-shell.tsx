@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AccountBar } from "@/components/sportsbook/account-bar";
 import { Board } from "@/components/sportsbook/board";
 import { BetSlip } from "@/components/sportsbook/bet-slip";
@@ -54,12 +54,13 @@ export function SportsbookApp({ initialScores }: { initialScores?: ScoreBoard })
       <header className="border-b line-gold bg-void/95">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="min-w-0">
-            <h1 className="font-display text-lg font-semibold uppercase tracking-[0.12em] text-cream sm:text-xl">
-              Eastside Legends{" "}
-              <span className="ml-1 inline-flex items-center rounded-[var(--radius-pill)] border border-gold/50 bg-gold/15 px-2 py-0.5 text-[10px] font-semibold tracking-[0.18em] text-gold">
-                SIM
-              </span>
+            <p className="club-kicker">Las Vegas · After dark</p>
+            <h1 className="font-display text-lg font-semibold tracking-tight text-cream sm:text-2xl">
+              Eastside Legends Sim
             </h1>
+            <p className="mt-0.5 hidden text-xs text-muted sm:block">
+              Game-day hangout. Simulation only. E$L coin$ — no real money.
+            </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             <AccountBar />

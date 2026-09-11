@@ -1,35 +1,42 @@
-﻿# Eastside league chat â€” how to poke
+# Eastside league chat — how to poke
 
 ## 1) Supabase SQL (required once)
-1. Open https://supabase.com/dashboard â†’ project `yqnbeksemcgmggframnd`
-2. SQL Editor â†’ New query
+1. Open https://supabase.com/dashboard → project `yqnbeksemcgmggframnd`
+2. SQL Editor → New query
 3. Paste and run: `supabase/league-chat.sql` from the laptop clone
-4. If `alter publication ... add table` errors as â€œalready memberâ€, ignore
-5. Database â†’ Publications / Realtime: confirm `league_chat_messages` is enabled for Realtime
+4. If `alter publication ... add table` errors as “already member”, ignore
+5. Database → Publications / Realtime: confirm `league_chat_messages` is enabled for Realtime
 
 ## 2) Auth settings
-- Authentication â†’ Providers â†’ Email: enable Email OTP / magic link
-- Authentication â†’ URL config: allow `http://localhost:8080` (and `http://127.0.0.1:8080`)
+- Authentication → Providers → Email: enable Email OTP / magic link
+- **Site URL** (production): current live grok.me host (ocean-crane or the host this Publish minted)
+- Authentication → URL configuration → Redirect URLs — allow ALL of:
 
-## 3) Local app
-```powershell
-cd C:\Users\rober\src\otter-prairie-urban-forge
-npm run dev
 ```
-Open http://localhost:8080 → **League** → **Chat**
-- Logged out: Sign-in CTA, board still works on Board tab
-- Sign in via magic link â†’ auto-join if under 12/12 â†’ post messages; live updates for other signed-in members
+http://localhost:8080/**
+http://127.0.0.1:8080/**
+https://ocean-crane-pepper-lark.grok.me/**
+https://otter-prairie-urban-forge.grok.me/**
+https://summit-leaf-blend-aurora.grok.me/**
+https://<this-publish-host>.grok.me/**
+```
+
+Magic-link `emailRedirectTo` is always `${window.location.origin}/join?code=EASTSIDE`.
+
+## 3) App env (required for chat on grok.me)
+Set at **build** (anon only — never `service_role` in the client):
+
+- `VITE_SUPABASE_URL` = `https://yqnbeksemcgmggframnd.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = project anon public key from Supabase → Settings → API
+
+Without the anon key, `/join?code=EASTSIDE` shows the chat-lock plaque.
+
+## 4) Local / preview
+Open `/join?code=EASTSIDE` → magic link → auto-join if under 12/12 → claim a Yahoo team name → Open Chat.
 
 ## Cap
 Participants show `n/12`. At 12/12 new accounts cannot join or post.
 
-## Redirect URLs (Supabase Auth)
-
-Allow these in Authentication → URL configuration → Redirect URLs:
-
-- `http://localhost:8080/**`
-- `http://127.0.0.1:8080/**`
-- `https://otter-prairie-urban-forge.grok.me/**`
-
-
-
+## Auth split
+- `/join?code=EASTSIDE` = Supabase OTP (required for chat RLS `auth.uid()`)
+- `/login` = club profile (Better Auth). It does **not** land in league chat.

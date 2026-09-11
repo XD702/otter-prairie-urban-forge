@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { InviteBar } from "@/components/sportsbook/invite-bar";
 import { TeamPicker } from "@/components/sportsbook/team-picker";
 import { Button } from "@/components/ui/button";
 import { supabaseConfigured } from "@/lib/supabase/client";
 import {
   INVITE_CODE,
-  buildInviteUrl,
+  inviteEmailRedirectTo,
   markOpenChatOnHome,
   parseInviteFromLocation,
 } from "@/lib/supabase/invite";
@@ -22,7 +22,7 @@ import { useSupabaseSession } from "@/lib/supabase/use-session";
  * /join?code=EASTSIDE
  *
  * Auth: Supabase magic link via InviteBar (signInWithOtp).
- * Laptop /login may still be better-auth — this page does NOT use that.
+ * /login is a separate Better Auth club account — it does NOT land in chat.
  * After session: auto joinLeagueChat → team picker (Yahoo names) → Open Chat.
  */
 
@@ -75,7 +75,7 @@ function JoinPage() {
     [user],
   );
 
-  const redirectTo = useMemo(() => buildInviteUrl(), []);
+  void session;
 
   useEffect(() => {
     if (!ready || !user || !invite.valid || !supabaseConfigured) return;
@@ -120,13 +120,15 @@ function JoinPage() {
     <div className="min-h-dvh bg-felt px-4 py-8 text-cream">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
         <header className="casino-card rounded-2xl border border-gold/25 p-5">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-gold/80">
-            Eastside Legends · invite
-          </p>
-          <h1 className="mt-1 font-display text-3xl text-gold">Join the league</h1>
+          <p className="club-kicker">East Side Social Club · After Dark</p>
+          <h1 className="mt-2 font-display text-3xl text-gold">Join the league</h1>
           <p className="mt-2 text-sm text-muted">
             Magic link → chat (max {LEAGUE_CHAT_CAP}) → claim one Yahoo team by
-            name. First claim wins. Simulation only.
+            name. First claim wins.
+          </p>
+          <p className="mt-2 text-xs text-gold/80">
+            Simulation only. E$L coin$ — no real money. After Dark hangout, not a
+            bank or bookmaker login.
           </p>
           <p className="mt-2 text-xs text-muted">
             Code:{" "}
@@ -144,8 +146,13 @@ function JoinPage() {
 
         {!supabaseConfigured ? (
           <section className="casino-card rounded-2xl border border-gold/25 p-5 text-sm text-muted">
-            Supabase env is missing. Add VITE_SUPABASE_URL and
-            VITE_SUPABASE_ANON_KEY, then restart npm run dev.
+            <p className="font-display text-gold">Chat lock is on</p>
+            <p className="mt-2">
+              League chat needs the club's live key wired on this host. Rob:
+              paste <span className="text-cream">VITE_SUPABASE_ANON_KEY</span>{" "}
+              (anon only — never service_role) into the app env, then republish.
+              Project <code className="text-gold">yqnbeksemcgmggframnd</code>.
+            </p>
           </section>
         ) : null}
 
@@ -155,7 +162,7 @@ function JoinPage() {
 
         {invite.valid && supabaseConfigured && ready && !user ? (
           <InviteBar
-            redirectTo={redirectTo}
+            redirectTo={inviteEmailRedirectTo()}
             heading="Sign in to claim a team"
           />
         ) : null}
@@ -207,17 +214,15 @@ function JoinPage() {
                 Board home
               </Button>
             </div>
-            <p className="text-[11px] text-muted">
-              Open Chat sets sessionStorage eastside-open-chat=1 and navigates
-              to /. Wire app-shell to switch to the Chat tab when that flag is
-              present (see patches).
-            </p>
           </>
         ) : null}
 
         <p className="text-[11px] text-muted">
-          Note: AccountBar /login may still be better-auth. This Join page uses
-          Supabase OTP so chat RLS (auth.uid()) works.
+          League chat uses this Join magic link (Supabase). The laptop{" "}
+          <Link to="/login" className="text-gold underline-offset-4 hover:underline">
+            /login
+          </Link>{" "}
+          form is a separate club account and will not open chat.
         </p>
       </div>
     </div>

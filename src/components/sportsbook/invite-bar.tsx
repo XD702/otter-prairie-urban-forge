@@ -41,7 +41,12 @@ export function InviteBar({
     if (!sb || !trimmed) return;
     setBusy(true);
     setStatus(null);
-    const target = redirectTo ?? inviteEmailRedirectTo();
+    const target = redirectTo?.trim() || inviteEmailRedirectTo();
+    if (!target) {
+      setBusy(false);
+      setStatus("Invite link is not ready — refresh and try again.");
+      return;
+    }
     const { error } = await sb.auth.signInWithOtp({
       email: trimmed,
       options: {
@@ -63,8 +68,8 @@ export function InviteBar({
     >
       <h3 className="font-display text-base text-gold">{heading}</h3>
       <p className="mt-1 text-xs text-muted">
-        Supabase magic link (not the /login better-auth form). Use your real
-        email — no invented accounts.
+        After Dark magic link for league chat — simulation only, no real money.
+        Use your real email. This is not the club-account /login form.
       </p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <Input

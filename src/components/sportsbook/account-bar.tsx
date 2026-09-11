@@ -23,10 +23,11 @@ export function AccountBar() {
       </SignedIn>
       <SignedOut>
         <Link
-          to="/login"
+          to="/join"
+          search={{ code: "EASTSIDE" }}
           className="inline-flex min-h-11 items-center rounded-full border border-gold/40 px-4 text-sm text-gold hover:border-gold hover:bg-gold/10"
         >
-          Sign in
+          Join chat
         </Link>
       </SignedOut>
     </>
